@@ -1,0 +1,20 @@
+# Environment variables
+.env.local
+.env.*.local
+
+# Node modules folder (dependencies)
+node_modules/
+
+# Next.js build output
+.next/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Optional Mac system files
+.DS_Store
+
+# VS Code settings (optional)
+.vscode/
