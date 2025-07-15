@@ -1,7 +1,7 @@
 // pages/upload.js
 import { useState, useEffect } from "react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../lib/firebase";
+import firebase from '../../lib/firebase';
 import { useRouter } from "next/router";
 import { v4 as uuidv4 } from "uuid";
 
