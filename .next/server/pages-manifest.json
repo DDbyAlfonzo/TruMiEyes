@@ -1,10 +1,9 @@
 {
-  "/": "pages/index.html",
   "/_app": "pages/_app.js",
-  "/pages": "pages/pages.html",
-  "/pages/upload": "pages/pages/upload.html",
   "/_error": "pages/_error.js",
-  "/pages/login": "pages/pages/login.html",
   "/_document": "pages/_document.js",
-  "/404": "pages/404.html"
+  "/": "pages/index.js",
+  "/login": "pages/login.js",
+  "/upload": "pages/upload.js",
+  "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js"
 }
