@@ -10,7 +10,7 @@ body, html {
 }
 
 .overlay {
-  background-color: rgb(255, 255, 255);
+  background-color: rgba(0, 0, 0, 0.6);
   min-height: 100vh;
   width: 100%;
   display: flex;
@@ -34,6 +34,10 @@ body, html {
 .container img.logo {
   max-width: 250px; 
   margin-bottom: 1.5rem;
+}
+
+.container nav h1 {
+  color: white;
 }
 
 @media (max-width: 600px) {
