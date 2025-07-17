@@ -16,36 +16,57 @@ body, html {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-sizing: border-box;
   padding: 2rem;
+  box-sizing: border-box;
+}
+
+.container-wrapper {
+  max-width: 600px;
+  width: 100%;
+  position: relative;
 }
 
 .container {
   position: relative;
-  max-width: 600px;
-  width: 100%;
   background: rgba(255, 255, 255, 0.08);
   padding: 2rem;
+  border-radius: 16px;
   backdrop-filter: blur(12px);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   text-align: center;
-  z-index: 0;
+  z-index: 1;
 }
 
 .container img.logo {
-  max-width: 250px; 
+  max-width: 250px;
   margin-bottom: 1.5rem;
 }
 
-.container nav h1, 
+.container nav h1,
+.container h2,
 .container p {
   color: white;
 }
 
-@media (max-width: 600px) {
-  .container {
-    padding: 1.2rem;
-  }
+.top-right {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+.back-button {
+  background-color: transparent;
+  border: 1px solid #ffffff50;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s ease;
+}
+
+.back-button:hover {
+  background-color: #ffffff20;
 }
 
 input, button {
@@ -95,10 +116,15 @@ nav a {
 }
 
 @media (max-width: 600px) {
+  .container {
+    padding: 1.2rem;
+  }
+
   nav {
     flex-direction: column;
     align-items: flex-start;
   }
+
   nav a {
     margin: 0.5rem 0;
   }
