@@ -1,5 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 
+/* 1. Universal box-sizing */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body, html {
   margin: 0;
   padding: 0;
@@ -23,6 +30,7 @@ body, html {
 .container {
   max-width: 600px;
   width: 100%;
+  margin: 0 auto;
   background: rgba(255, 255, 255, 0.08);
   padding: 2rem;
   border-radius: 16px;
@@ -36,37 +44,34 @@ body, html {
   margin-bottom: 1.5rem;
 }
 
-.container nav h1 {
+/* 2. Fix container nav selector */
+.container nav h1,
+.container nav h2 {
   color: white;
-}
-
-@media (max-width: 600px) {
-  .container {
-    padding: 1.2rem;
-  }
 }
 
 input, button {
   font-family: inherit;
 }
 
+/* 4. Inputs and buttons consistent width & box-sizing */
 input[type="text"],
 input[type="password"],
-input[type="file"] {
+input[type="file"],
+button {
   width: 100%;
+  box-sizing: border-box;
   padding: 0.8rem;
   margin-bottom: 1rem;
   border: none;
   border-radius: 8px;
+  display: block;
 }
 
 button {
-  width: 100%;
   padding: 0.9rem;
   background-color: #f05454;
   color: white;
-  border: none;
-  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.3s ease;
@@ -90,9 +95,11 @@ nav a {
   margin-left: 1rem;
 }
 
+/* 3. Container margin on small screens */
 @media (max-width: 600px) {
   .container {
     padding: 1.2rem;
+    margin: 0 1rem;
   }
   nav {
     flex-direction: column;
