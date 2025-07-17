@@ -1,25 +1,52 @@
-import {
-  container,
-  logo,
-  formContainer,
-  formTitle,
-  input,
-  primaryButton,
-} from '../styles/sharedStyles';
+import { useState } from 'react';
+import Link from 'next/link'; // ✅ This line fixes the error
 
-export default function LoginPage() {
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleLogin = e => {
+    e.preventDefault();
+    // Implement login logic
+    console.log({ email, password });
+  };
+
   return (
-    <main style={container}>
-      <img src="/TruMiEyelogo.png" alt="TruMiEyes Logo" style={logo} />
-      <h2 style={formTitle}>Login</h2>
+    <div className="container">
+      <img src="/trumieyeslogo.png" alt="TruMiEyes Logo" className="logo" />
 
-      <form style={formContainer}>
-        <input type="email" placeholder="Email" style={input} />
-        <input type="password" placeholder="Password" style={input} />
-        <button type="submit" style={primaryButton}>
-          Login
+      <Link href="/">
+        <button style={{
+          marginBottom: '1.5rem',
+          padding: '0.5rem 1rem',
+          backgroundColor: '#ffffff20',
+          border: '1px solid #ffffff30',
+          borderRadius: '8px',
+          color: '#fff',
+          cursor: 'pointer'
+        }}>
+          ← Back to Home
         </button>
+      </Link>
+
+      <h2>Login to TruMiEyes</h2>
+      <form onSubmit={handleLogin}>
+        <input
+          type="text"
+          placeholder="Email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+        />
+        <button type="submit">Login</button>
       </form>
-    </main>
+    </div>
   );
 }

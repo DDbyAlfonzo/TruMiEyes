@@ -1,2 +1,10 @@
 node_modules
 .vercel
+
+echo ".next" >> .gitignore
+echo ".DS_Store" >> .gitignore
+
+git rm -r --cached .next
+git rm --cached .DS_Store
+git commit -m "Remove build cache and system files from git"
+git push

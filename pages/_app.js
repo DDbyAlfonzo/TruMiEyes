@@ -1,9 +1,9 @@
-import { SessionProvider } from 'next-auth/react';
+import '../styles/globals.css';
 
-export default function MyApp({ Component, pageProps }) {
+export default function App({ Component, pageProps }) {
   return (
-    <SessionProvider session={pageProps.session}>
+    <div className="overlay">
       <Component {...pageProps} />
-    </SessionProvider>
+    </div>
   );
 }
