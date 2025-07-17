@@ -26,80 +26,18 @@ body, html {
   width: 100%;
   background: rgba(255, 255, 255, 0.08);
   padding: 2rem;
-  border-radius: 16px;
   backdrop-filter: blur(12px);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   text-align: center;
   z-index: 0;
 }
 
-/* Animated border */
-.container::before {
-  content: '';
-  pointer-events: none;
-  position: absolute;
-  top: -4px; 
-  left: -4px;
-  right: -4px;
-  bottom: -4px;
-  border-radius: 20px;
-  border: 2px solid white;
-  
-  /* Border dash for animation */
-  border-style: solid;
-  border-color: white;
-  border-width: 2px;
-  
-  /* Stroke dash array to simulate "dash" and gap for animation */
-  border-image: none;
-  box-sizing: border-box;
-  
-  /* We'll simulate border animation with a CSS background gradient and animation */
-  background: none;
-  
-  /* To animate the border, use an SVG approach or CSS trick - simpler: use a CSS border with outline + animation on dash offset */
-  
-  /* Trick: use a SVG-like dashed border animation effect */
-  border: 2px solid transparent;
-  border-radius: 20px;
-  box-sizing: border-box;
-  
-  background:
-    linear-gradient(white, white) padding-box,
-    linear-gradient(to right, white 0%, white 100%) border-box;
-  
-  animation: border-draw 4s linear infinite;
-  background-repeat: no-repeat;
-  background-size: 100% 2px, 2px 100%;
-  background-position: top left, top left;
-}
-
-@keyframes border-draw {
-  0% {
-    background-position: top left, top left;
-  }
-  25% {
-    background-position: top right, top left;
-  }
-  50% {
-    background-position: top right, bottom right;
-  }
-  75% {
-    background-position: top left, bottom right;
-  }
-  100% {
-    background-position: top left, top left;
-  }
-}
-
-/* Text colors */
 .container img.logo {
   max-width: 250px; 
   margin-bottom: 1.5rem;
 }
 
 .container nav h1, 
-.container h2, 
 .container p {
   color: white;
 }
