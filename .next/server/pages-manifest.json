@@ -1,7 +1,12 @@
 {
+  "/Share/[ShareID]": "pages/Share/[ShareID].html",
+  "/admin": "pages/admin.html",
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
+  "/": "pages/index.html",
+  "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
+  "/login": "pages/login.html",
+  "/upload": "pages/upload.html",
   "/_document": "pages/_document.js",
-  "/": "pages/index.js",
-  "/login": "pages/login.js"
+  "/404": "pages/404.html"
 }

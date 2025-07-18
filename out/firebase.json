@@ -1,0 +1,30 @@
+{
+    "hosting": {
+      "public": "out",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    "emulators": {
+      "hosting": {
+        "host": "localhost",
+        "port": 5001
+      },
+      "firestore": {
+        "port": 8080
+      },
+      "ui": {
+        "enabled": true,
+        "port": 4000
+      }
+    }
+  }
+  

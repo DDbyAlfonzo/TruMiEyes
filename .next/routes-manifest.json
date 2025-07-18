@@ -20,6 +20,14 @@
   },
   "dynamicRoutes": [
     {
+      "page": "/Share/[ShareID]",
+      "regex": "^/Share/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPShareID": "nxtPShareID"
+      },
+      "namedRegex": "^/Share/(?<nxtPShareID>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/api/auth/[...nextauth]",
       "regex": "^/api/auth/(.+?)(?:/)?$",
       "routeKeys": {
@@ -34,6 +42,12 @@
       "regex": "^/(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/admin",
+      "regex": "^/admin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin(?:/)?$"
     },
     {
       "page": "/login",
