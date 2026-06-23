@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "verify:ci": "npm test && NEXT_DIST_DIR=.next.ci npm run build",
     "smoke": "node --import tsx scripts/smoke.ts",
     "test": "node --test --import tsx tests/**/*.test.ts",
