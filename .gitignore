@@ -1,10 +1,13 @@
 node_modules
+.next
+.next.ci
+.next.smoke
+.next.pre_smoke_backup
+out
 .vercel
+.DS_Store
+*.log
 
-echo ".next" >> .gitignore
-echo ".DS_Store" >> .gitignore
-
-git rm -r --cached .next
-git rm --cached .DS_Store
-git commit -m "Remove build cache and system files from git"
-git push
+.env
+.env.local
+serviceAccountKey.json

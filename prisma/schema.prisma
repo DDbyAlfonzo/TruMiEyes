@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String           @id @default(cuid())
+  name         String?
+  email        String           @unique
+  passwordHash String
+  role         Role             @default(CLIENT)
+  createdAt    DateTime         @default(now())
+  projects     ClientProject[]  @relation("ClientProjects")
+  layouts      BookLayout[]     @relation("AdminLayouts")
+  selections   ClientSelection[]
+  notes        ProjectNote[]
+  requestMessages ProjectRequestMessage[]
+  resetTokens  PasswordResetToken[]
+  photoFavorites PhotoFavorite[]
+  photoComments  PhotoComment[]
+}
+
+model ClientProject {
+  id          String          @id @default(cuid())
+  clientId    String
+  title       String
+  description String?
+  status      ProjectStatus   @default(DRAFT)
+  requestMessage String?
+  createdAt   DateTime        @default(now())
+  client      User            @relation("ClientProjects", fields: [clientId], references: [id])
+  layouts     ProjectLayout[]
+  images      ProjectImage[]
+  selections  ClientSelection[]
+  notes       ProjectNote[]
+  requestMessages ProjectRequestMessage[]
+  photoFavorites PhotoFavorite[]
+  photoComments  PhotoComment[]
+}
+
+model BookLayout {
+  id               String         @id @default(cuid())
+  name             String
+  description      String?
+  previewImagePath String
+  pageCount        Int
+  orientation      Orientation
+  createdByAdminId String
+  createdAt        DateTime       @default(now())
+  admin            User           @relation("AdminLayouts", fields: [createdByAdminId], references: [id])
+  projectLayouts   ProjectLayout[]
+  selections       ClientSelection[]
+}
+
+model ProjectLayout {
+  id        String       @id @default(cuid())
+  projectId String
+  layoutId  String
+  project   ClientProject @relation(fields: [projectId], references: [id])
+  layout    BookLayout   @relation(fields: [layoutId], references: [id])
+  @@unique([projectId, layoutId])
+}
+
+model ProjectImage {
+  id         String        @id @default(cuid())
+  projectId  String
+  imagePath  String
+  filename   String
+  downloadable Boolean     @default(false)
+  status     ProjectImageStatus @default(CLIENT_REVIEW)
+  uploadedAt DateTime      @default(now())
+  project    ClientProject @relation(fields: [projectId], references: [id])
+  selectedBy SelectedImage[]
+  favorites  PhotoFavorite[]
+  comments   PhotoComment[]
+}
+
+model ClientSelection {
+  id              String          @id @default(cuid())
+  projectId       String
+  clientId        String
+  selectedLayoutId String?
+  notes           String?
+  submittedAt     DateTime?
+  approvalStatus  ApprovalStatus  @default(PENDING)
+  project         ClientProject   @relation(fields: [projectId], references: [id])
+  client          User            @relation(fields: [clientId], references: [id])
+  selectedLayout  BookLayout?     @relation(fields: [selectedLayoutId], references: [id])
+  selectedImages  SelectedImage[]
+}
+
+model SelectedImage {
+  id             String          @id @default(cuid())
+  selectionId    String
+  projectImageId String
+  selection      ClientSelection @relation(fields: [selectionId], references: [id])
+  projectImage   ProjectImage    @relation(fields: [projectImageId], references: [id])
+  @@unique([selectionId, projectImageId])
+}
+
+model PhotoFavorite {
+  id        String       @id @default(cuid())
+  userId    String
+  photoId   String
+  galleryId String
+  createdAt DateTime     @default(now())
+  user      User         @relation(fields: [userId], references: [id])
+  photo     ProjectImage @relation(fields: [photoId], references: [id])
+  gallery   ClientProject @relation(fields: [galleryId], references: [id])
+
+  @@unique([userId, photoId])
+  @@index([galleryId])
+}
+
+model PhotoComment {
+  id        String        @id @default(cuid())
+  userId    String
+  photoId   String
+  galleryId String
+  message   String
+  createdAt DateTime      @default(now())
+  user      User          @relation(fields: [userId], references: [id])
+  photo     ProjectImage  @relation(fields: [photoId], references: [id])
+  gallery   ClientProject @relation(fields: [galleryId], references: [id])
+
+  @@index([photoId])
+  @@index([galleryId])
+}
+
+model ProjectNote {
+  id        String        @id @default(cuid())
+  projectId String
+  authorId  String
+  body      String
+  createdAt DateTime      @default(now())
+  project   ClientProject @relation(fields: [projectId], references: [id])
+  author    User          @relation(fields: [authorId], references: [id])
+}
+
+model ProjectRequestMessage {
+  id        String        @id @default(cuid())
+  projectId String
+  authorId  String
+  message   String
+  createdAt DateTime      @default(now())
+  project   ClientProject @relation(fields: [projectId], references: [id])
+  author    User          @relation(fields: [authorId], references: [id])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  CLIENT
+}
+
+enum ProjectStatus {
+  DRAFT
+  SHARED
+  IN_REVIEW
+  APPROVED
+  COMPLETED
+}
+
+enum Orientation {
+  PORTRAIT
+  LANDSCAPE
+  SQUARE
+}
+
+enum ApprovalStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+}
+
+enum ProjectImageStatus {
+  HIDDEN
+  CLIENT_REVIEW
+  APPROVED
+}
