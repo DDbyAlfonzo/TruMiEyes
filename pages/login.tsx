@@ -90,38 +90,62 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="grid min-h-screen bg-background text-white lg:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]">
+    <main className="relative grid min-h-screen overflow-hidden bg-background text-white lg:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]">
+      <div className="absolute inset-0 lg:hidden">
+        <img src="/bg.jpg" alt="" className="h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-black/35" />
+      </div>
+
       <section className="relative hidden min-h-screen overflow-hidden lg:block">
         <img src="/bg.jpg" alt="" className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/25 via-black/15 to-background" />
-        <div className="absolute bottom-12 left-12 max-w-xl">
-          <BrandMark size="lg" className="mb-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-black/10 to-black/20" />
+        <div className="absolute bottom-12 left-12 max-w-xl rounded-[2rem] border border-white/10 bg-black/30 p-8 shadow-2xl shadow-black/30 backdrop-blur-md">
+          <div className="mb-10 inline-flex rounded-full border border-white/10 bg-black/35 px-5 py-3 shadow-lg shadow-black/25 backdrop-blur-md">
+            <BrandMark size="lg" />
+          </div>
           <p className="page-kicker">Private client proofing</p>
-          <h1 className="mt-4 font-serif text-7xl font-light leading-none tracking-wide">
+          <h1 className="mt-4 font-serif text-7xl font-light leading-none tracking-wide drop-shadow-[0_4px_24px_rgba(0,0,0,0.75)]">
             Your story, presented with care.
           </h1>
-          <p className="mt-6 max-w-md text-base leading-7 text-zinc-300">
+          <p className="mt-6 max-w-md text-base leading-7 text-zinc-100 drop-shadow-[0_2px_14px_rgba(0,0,0,0.75)]">
             A refined workspace for reviewing sessions, selecting favourites, and preparing final image delivery.
           </p>
         </div>
       </section>
 
-      <section className="flex min-h-screen items-center justify-center px-5 py-10">
-        <div className="w-full max-w-md">
+      <section className="relative flex min-h-screen items-center justify-center px-5 py-10">
+        <div className="absolute inset-0 hidden lg:block">
+          <img src="/bg.jpg" alt="" className="h-full w-full object-cover opacity-55" />
+          <div className="absolute inset-0 bg-gradient-to-l from-black/35 via-black/20 to-transparent" />
+        </div>
+
+        <div className="relative w-full max-w-md">
           <div className="mb-10 text-center">
-            <div className="mx-auto mb-5 flex justify-center">
+            <div className="mx-auto mb-5 flex justify-center rounded-full border border-white/10 bg-black/30 px-5 py-3 shadow-lg shadow-black/25 backdrop-blur-md">
               <BrandMark size="lg" />
             </div>
             <div className="mx-auto h-px w-20 bg-brand-red/40" />
           </div>
 
-          <div className="luxury-panel p-6 md:p-8">
-            <div className="mb-8 grid grid-cols-2 rounded-full border border-line bg-black/25 p-1">
+          <div className="mb-6 rounded-3xl border border-white/10 bg-black/35 p-6 shadow-2xl shadow-black/30 backdrop-blur-md lg:hidden">
+            <p className="page-kicker">Private client proofing</p>
+            <h1 className="mt-3 font-serif text-4xl font-light leading-tight tracking-wide drop-shadow-[0_4px_18px_rgba(0,0,0,0.75)]">
+              Your story, presented with care.
+            </h1>
+            <p className="mt-4 text-sm leading-6 text-zinc-100 drop-shadow-[0_2px_12px_rgba(0,0,0,0.75)]">
+              Review sessions, select favourites, and prepare final image delivery in one refined workspace.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-[rgba(10,10,10,0.56)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-[20px] md:p-8">
+            <div className="mb-8 grid grid-cols-2 rounded-full border border-white/10 bg-black/25 p-1 shadow-inner shadow-black/30">
               {(["CLIENT", "ADMIN"] as const).map((role) => (
                 <button
                   key={role}
                   className={`rounded-full px-4 py-2 text-sm transition ${
-                    roleView === role ? "bg-champagne text-black" : "text-zinc-400 hover:text-white"
+                    roleView === role
+                      ? "bg-brand-red text-white shadow-lg shadow-brand-red/20"
+                      : "text-zinc-300 hover:bg-white/5 hover:text-white"
                   }`}
                   onClick={() => setRoleView(role)}
                   type="button"
