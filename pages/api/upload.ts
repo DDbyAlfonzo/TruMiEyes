@@ -5,7 +5,7 @@ import formidable from "formidable";
 import path from "path";
 import fs from "fs";
 import os from "os";
-import { getBucket } from "../../lib/storage";
+import { uploadImage } from "../../lib/storage";
 
 export const config = {
   api: {
@@ -45,26 +45,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: "Choose a file before uploading." });
       }
       const original = file.originalFilename || "upload";
-      const ext = path.extname(original);
-      const objectName = `uploads/${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-      const bucket = getBucket();
-
-      if (!bucket) {
-        return res.status(500).json({
-          error: "Uploads are unavailable until Google Cloud Storage is configured.",
-        });
-      }
-
-      await bucket.upload(file.filepath, {
-        destination: objectName,
-        resumable: false,
-        contentType: file.mimetype || "application/octet-stream",
-      });
-      return res.status(200).json({ path: objectName, filename: original });
+      const upload = await uploadImage(file.filepath, original);
+      return res.status(200).json({ path: upload.secureUrl, filename: original });
     } catch (error) {
       console.error("[upload] Upload failed", error);
+      if (error instanceof Error && error.message.includes("Cloudinary is not configured")) {
+        return res.status(500).json({
+          error:
+            "Uploads are unavailable until Cloudinary is configured. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.",
+        });
+      }
       return res.status(500).json({
-        error: "Upload failed. Check your storage configuration and try again.",
+        error: "Upload failed. Check your Cloudinary configuration and try again.",
       });
     }
   });

@@ -5,6 +5,7 @@ import { ImageWithFallback } from "./ImageWithFallback";
 
 type PhotoCardProps = {
   imageUrl: string;
+  downloadUrl?: string;
   filename: string;
   selected?: boolean;
   downloadable?: boolean;
@@ -16,6 +17,7 @@ type PhotoCardProps = {
 
 export function PhotoCard({
   imageUrl,
+  downloadUrl,
   filename,
   selected,
   downloadable,
@@ -49,7 +51,7 @@ export function PhotoCard({
             {downloadable && (
               <a
                 className="inline-flex items-center gap-1 rounded-full outline-none transition hover:text-champagne focus-visible:ring-2 focus-visible:ring-champagne"
-                href={imageUrl}
+                href={downloadUrl || imageUrl}
                 download={filename}
                 onClick={(event) => event.stopPropagation()}
               >

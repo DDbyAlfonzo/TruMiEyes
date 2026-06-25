@@ -6,6 +6,7 @@ import { ImageWithFallback } from "./ImageWithFallback";
 type LightboxItem = {
   id: string;
   imageUrl: string;
+  downloadUrl?: string;
   filename: string;
   downloadable?: boolean;
 };

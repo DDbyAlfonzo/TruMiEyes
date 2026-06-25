@@ -5,7 +5,7 @@ import { Download, Heart } from "lucide-react";
 import { authOptions } from "../api/auth/[...nextauth]";
 import { prisma } from "../../lib/prisma";
 import { readApiJson } from "../../lib/clientApi";
-import { getDisplayUrl } from "../../lib/storage";
+import { getDisplayUrl, getDownloadUrl } from "../../lib/storage";
 import Lightbox from "../../components/Lightbox";
 import { canClientAccessProject, isSelectionLocked } from "../../lib/workflowRules";
 import { AppShell } from "../../components/AppShell";
@@ -29,6 +29,7 @@ type Layout = {
 type ProjectImage = {
   id: string;
   imageUrl: string;
+  downloadUrl: string;
   filename: string;
   downloadable: boolean;
   status: string;
@@ -293,6 +294,7 @@ export default function ProjectDetailPage({
                 <div key={image.id} className="break-inside-avoid">
                   <PhotoCard
                     imageUrl={image.imageUrl}
+                    downloadUrl={image.downloadUrl}
                     filename={image.filename}
                     selected={isFavorite}
                     downloadable={image.downloadable}
@@ -350,7 +352,7 @@ export default function ProjectDetailPage({
               {image.downloadable && (
                 <a
                   className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 px-4 text-sm"
-                  href={image.imageUrl}
+                  href={image.downloadUrl}
                   download={image.filename}
                 >
                   <Download size={15} />
@@ -439,19 +441,23 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         })),
       ),
       images: await Promise.all(
-        project.images.map(async (image) => ({
-          id: image.id,
-          imageUrl: await getDisplayUrl(image.imagePath, "/trumieyeslogo.png"),
-          filename: image.filename,
-          downloadable: image.downloadable,
-          status: image.status,
-          uploadedAt: image.uploadedAt.toISOString(),
-          comments: image.comments.map((comment) => ({
-            id: comment.id,
-            message: comment.message,
-            createdAt: comment.createdAt.toISOString(),
-          })),
-        })),
+        project.images.map(async (image) => {
+          const imageUrl = await getDisplayUrl(image.imagePath, "/trumieyeslogo.png");
+          return {
+            id: image.id,
+            imageUrl,
+            downloadUrl: getDownloadUrl(imageUrl, image.filename),
+            filename: image.filename,
+            downloadable: image.downloadable,
+            status: image.status,
+            uploadedAt: image.uploadedAt.toISOString(),
+            comments: image.comments.map((comment) => ({
+              id: comment.id,
+              message: comment.message,
+              createdAt: comment.createdAt.toISOString(),
+            })),
+          };
+        }),
       ),
       existingSelection: selection
         ? {

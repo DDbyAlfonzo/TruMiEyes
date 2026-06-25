@@ -1,76 +1,86 @@
-import { Storage, type Bucket } from "@google-cloud/storage";
+import { v2 as cloudinary } from "cloudinary";
 
-const hasGcsConfig = Boolean(
-  process.env.GCS_PROJECT_ID &&
-    process.env.GCS_BUCKET_NAME &&
-    process.env.GCS_CLIENT_EMAIL &&
-    process.env.GCS_PRIVATE_KEY,
+const hasCloudinaryConfig = Boolean(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET,
 );
 
-let storage: Storage | null = null;
+let configured = false;
 
-type CacheEntry = { url: string; expiresAt: number };
-
-const signedUrlCache = new Map<string, CacheEntry>();
-
-function createStorageClient() {
-  if (!hasGcsConfig) {
-    return null;
+function configureCloudinary() {
+  if (!hasCloudinaryConfig) {
+    return false;
   }
 
-  if (!storage) {
-    storage = new Storage({
-      projectId: process.env.GCS_PROJECT_ID,
-      credentials: {
-        client_email: process.env.GCS_CLIENT_EMAIL,
-        private_key: process.env.GCS_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-      },
+  if (!configured) {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+      secure: true,
     });
+    configured = true;
   }
 
-  return storage;
+  return true;
 }
 
-export function getBucket(): Bucket | null {
-  const storageClient = createStorageClient();
-  const bucketName = process.env.GCS_BUCKET_NAME;
+export function isStorageConfigured() {
+  return configureCloudinary();
+}
 
-  if (!storageClient || !bucketName) {
-    return null;
+export async function uploadImage(filePath: string, filename: string) {
+  if (!configureCloudinary()) {
+    throw new Error("Cloudinary is not configured for production uploads.");
   }
 
-  return storageClient.bucket(bucketName);
+  const result = await cloudinary.uploader.upload(filePath, {
+    folder: "trumieyes/project-images",
+    resource_type: "image",
+    use_filename: true,
+    unique_filename: true,
+    overwrite: false,
+    context: { filename },
+  });
+
+  return {
+    secureUrl: result.secure_url,
+    publicId: result.public_id,
+  };
 }
 
-export async function getSignedUrl(path: string, expiresInMinutes = 30) {
-  if (path.startsWith("/")) {
+function isCloudinaryUrl(path: string) {
+  return /^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\//.test(path);
+}
+
+function applyCloudinaryTransform(path: string, transform: string) {
+  if (!isCloudinaryUrl(path) || path.includes(`/${transform}/`)) {
     return path;
   }
 
-  const now = Date.now();
-  const cached = signedUrlCache.get(path);
-  if (cached && cached.expiresAt > now) {
-    return cached.url;
+  return path.replace("/image/upload/", `/image/upload/${transform}/`);
+}
+
+export async function getSignedUrl(path: string) {
+  if (path.startsWith("/") || path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
   }
 
-  const bucket = getBucket();
-  if (!bucket) {
-    throw new Error("Google Cloud Storage is not configured for this asset path.");
-  }
-
-  const [url] = await bucket.file(path).getSignedUrl({
-    action: "read",
-    expires: now + expiresInMinutes * 60 * 1000,
-  });
-  signedUrlCache.set(path, { url, expiresAt: now + (expiresInMinutes - 2) * 60 * 1000 });
-  return url;
+  throw new Error("Stored image path is not a Cloudinary URL.");
 }
 
 export async function getDisplayUrl(path: string, fallbackPath = "/bg.jpg") {
   try {
-    return await getSignedUrl(path);
+    const url = await getSignedUrl(path);
+    return applyCloudinaryTransform(url, "f_auto,q_auto");
   } catch (error) {
     console.error("[storage] Failed to resolve asset URL", path, error);
     return fallbackPath;
   }
+}
+
+export function getDownloadUrl(path: string, filename?: string) {
+  const attachmentName = filename ? `:attachment:${encodeURIComponent(filename)}` : "";
+  return applyCloudinaryTransform(path, `fl_attachment${attachmentName}`);
 }
