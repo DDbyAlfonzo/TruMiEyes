@@ -4,6 +4,7 @@ import { authOptions } from "./auth/[...nextauth]";
 import formidable from "formidable";
 import path from "path";
 import fs from "fs";
+import os from "os";
 import { getBucket } from "../../lib/storage";
 
 export const config = {
@@ -12,7 +13,7 @@ export const config = {
   },
 };
 
-const uploadDir = path.join(process.cwd(), "tmp");
+const uploadDir = path.join(os.tmpdir(), "trumieyes-uploads");
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
