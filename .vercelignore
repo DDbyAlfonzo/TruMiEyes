@@ -1,0 +1,13 @@
+.env
+.env.local
+.env.*.local
+.next
+.next.*
+node_modules
+out
+.DS_Store
+serviceAccountKey.json
+CheckAdmin.js
+convertServiceKey.js
+setAdmin.js
+functions
