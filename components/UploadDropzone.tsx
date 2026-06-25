@@ -7,6 +7,7 @@ type UploadDropzoneProps = {
   onReject?: (message: string) => void;
   disabled?: boolean;
   label?: string;
+  progress?: number | null;
 };
 
 export function UploadDropzone({
@@ -14,6 +15,7 @@ export function UploadDropzone({
   onReject,
   disabled,
   label = "Drop an image or browse",
+  progress,
 }: UploadDropzoneProps) {
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -68,6 +70,20 @@ export function UploadDropzone({
       </span>
       <span className="mt-4 text-sm font-medium text-white">{label}</span>
       <span className="mt-1 text-xs text-zinc-500">JPEG, PNG, or web image assets</span>
+      {typeof progress === "number" && (
+        <span className="mt-5 block w-full max-w-xs">
+          <span className="mb-2 flex items-center justify-between text-xs text-zinc-400">
+            <span>Uploading</span>
+            <span>{progress}%</span>
+          </span>
+          <span className="block h-2 overflow-hidden rounded-full bg-white/10">
+            <span
+              className="block h-full rounded-full bg-brand-red transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </span>
+        </span>
+      )}
       <input ref={inputRef} className="sr-only" type="file" accept="image/*" onChange={onChange} disabled={disabled} tabIndex={-1} />
     </label>
   );

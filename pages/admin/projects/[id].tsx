@@ -6,6 +6,7 @@ import { authOptions } from "../../api/auth/[...nextauth]";
 import { prisma } from "../../../lib/prisma";
 import { readApiJson } from "../../../lib/clientApi";
 import { getDisplayUrl } from "../../../lib/storage";
+import { uploadFileWithProgress } from "../../../lib/uploadClient";
 import { AppShell } from "../../../components/AppShell";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { UploadDropzone } from "../../../components/UploadDropzone";
@@ -67,6 +68,7 @@ export default function AdminProjectPage({
   const [requestMessage, setRequestMessage] = useState(project.requestMessage || "");
   const [approvalStatus, setApprovalStatus] = useState(selection?.approvalStatus || "PENDING");
   const [showRequestModal, setShowRequestModal] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [imageSettings, setImageSettings] = useState(
     Object.fromEntries(
       images.map((image) => [
@@ -236,13 +238,9 @@ export default function AdminProjectPage({
   const handleImageUpload = async (file: File) => {
     clearFeedback();
     setActiveAction("upload");
+    setUploadProgress(0);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const uploadData = await readApiJson<{ path: string; filename: string }>(
-        await fetch("/api/upload", { method: "POST", body: formData }),
-        "Unable to upload the image right now.",
-      );
+      const uploadData = await uploadFileWithProgress(file, setUploadProgress);
       await readApiJson(
         await fetch("/api/admin/images", {
           method: "POST",
@@ -260,6 +258,7 @@ export default function AdminProjectPage({
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to upload the image right now.");
     } finally {
+      setUploadProgress(null);
       setActiveAction(null);
     }
   };
@@ -420,6 +419,7 @@ export default function AdminProjectPage({
                   }}
                   disabled={busy}
                   label={activeAction === "upload" ? "Uploading..." : "Drop project image"}
+                  progress={uploadProgress}
                 />
               </div>
             </Card>

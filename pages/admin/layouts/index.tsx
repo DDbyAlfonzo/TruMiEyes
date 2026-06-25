@@ -5,6 +5,7 @@ import { authOptions } from "../../api/auth/[...nextauth]";
 import { prisma } from "../../../lib/prisma";
 import { readApiJson } from "../../../lib/clientApi";
 import { getDisplayUrl } from "../../../lib/storage";
+import { uploadFileWithProgress } from "../../../lib/uploadClient";
 import { AppShell } from "../../../components/AppShell";
 import { Card } from "../../../components/ui/card";
 import { Input } from "../../../components/ui/input";
@@ -34,6 +35,7 @@ export default function LayoutsPage({ layouts }: Props) {
   const [orientation, setOrientation] = useState("PORTRAIT");
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -45,17 +47,12 @@ export default function LayoutsPage({ layouts }: Props) {
     }
 
     setSaving(true);
+    setUploadProgress(0);
     setError("");
     setSuccess("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-      const uploadData = await readApiJson<{ path: string }>(
-        uploadRes,
-        "Unable to upload the preview image right now.",
-      );
+      const uploadData = await uploadFileWithProgress(file, setUploadProgress);
 
       await readApiJson(
         await fetch("/api/admin/layouts", {
@@ -77,6 +74,7 @@ export default function LayoutsPage({ layouts }: Props) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save the layout right now.");
     } finally {
+      setUploadProgress(null);
       setSaving(false);
     }
   };
@@ -107,7 +105,8 @@ export default function LayoutsPage({ layouts }: Props) {
                 setError(message);
               }}
               disabled={saving}
-              label={file ? file.name : "Drop layout preview"}
+              label={saving ? "Uploading preview..." : file ? file.name : "Drop layout preview"}
+              progress={uploadProgress}
             />
             {error && <p className="text-sm text-red-300">{error}</p>}
             {success && <p className="text-sm text-emerald-300">{success}</p>}
