@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 
 async function main() {
   const adminEmail = "admin@trumieyes.com";
+  const productionAdminEmail = "ardesignstudio25@gmail.com";
   const clientEmail = "client@trumieyes.com";
   const sampleLayoutName = "Classic 20-page";
   const sampleProjectTitle = "Smith Family Album";
@@ -12,23 +13,37 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {},
+    update: { active: true },
     create: {
       email: adminEmail,
       name: "Admin",
       passwordHash: adminPassword,
       role: "ADMIN",
+      active: true,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: productionAdminEmail },
+    update: { role: "ADMIN", active: true },
+    create: {
+      email: productionAdminEmail,
+      name: "AR Design Studio",
+      passwordHash: adminPassword,
+      role: "ADMIN",
+      active: true,
     },
   });
 
   const client = await prisma.user.upsert({
     where: { email: clientEmail },
-    update: {},
+    update: { active: true },
     create: {
       email: clientEmail,
       name: "Sample Client",
       passwordHash: clientPassword,
       role: "CLIENT",
+      active: true,
     },
   });
 

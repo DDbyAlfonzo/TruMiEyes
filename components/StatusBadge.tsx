@@ -10,6 +10,10 @@ const labels: Record<string, string> = {
   CLIENT_REVIEW: "Client review",
   PENDING: "Pending",
   SUBMITTED: "Submitted",
+  ADMIN: "Admin",
+  CLIENT: "Client",
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
 };
 
 const tones: Record<string, string> = {
@@ -22,6 +26,10 @@ const tones: Record<string, string> = {
   CLIENT_REVIEW: "border-brand-red/50 text-brand-red",
   PENDING: "border-zinc-700 text-zinc-400",
   SUBMITTED: "border-amber-300/40 text-amber-200",
+  ADMIN: "border-brand-red/50 text-brand-red",
+  CLIENT: "border-champagne/50 text-champagne",
+  ACTIVE: "border-emerald-300/40 text-emerald-200",
+  INACTIVE: "border-zinc-700 text-zinc-500",
 };
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {

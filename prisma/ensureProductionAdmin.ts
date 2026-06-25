@@ -6,13 +6,16 @@ const adminEmail = "ardesignstudio25@gmail.com";
 async function main() {
   const existingAdmin = await prisma.user.findUnique({
     where: { email: adminEmail },
-    select: { id: true, role: true },
+    select: { id: true, role: true, active: true },
   });
 
   if (existingAdmin) {
-    const updateData: { role?: "ADMIN"; passwordHash?: string } = {};
+    const updateData: { role?: "ADMIN"; active?: true; passwordHash?: string } = {};
     if (existingAdmin.role !== "ADMIN") {
       updateData.role = "ADMIN";
+    }
+    if (!existingAdmin.active) {
+      updateData.active = true;
     }
 
     if (process.env.PRODUCTION_ADMIN_RESET_PASSWORD === "true") {
@@ -48,6 +51,7 @@ async function main() {
       name: "AR Design Studio",
       passwordHash,
       role: "ADMIN",
+      active: true,
     },
   });
 

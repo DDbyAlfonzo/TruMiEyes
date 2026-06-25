@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === "GET") {
     const clients = await prisma.user.findMany({
-      where: { role: "CLIENT" },
+      where: { role: "CLIENT", active: true },
       select: { id: true, email: true, name: true },
     });
     return res.status(200).json(clients);
@@ -39,6 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           name: name || null,
           passwordHash,
           role: "CLIENT",
+          active: true,
         },
       });
       return res.status(201).json({ id: user.id, email: user.email, name: user.name });

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FolderOpen, LayoutDashboard, Layers, UploadCloud, X } from "lucide-react";
+import { FolderOpen, LayoutDashboard, Layers, UploadCloud, Users, X } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 import { BrandMark } from "./BrandMark";
@@ -14,6 +14,7 @@ const adminNav = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/projects", label: "Projects", icon: FolderOpen },
   { href: "/admin/layouts", label: "Layouts", icon: Layers },
+  { href: "/admin/users", label: "Users", icon: Users },
 ];
 
 const clientNav = [{ href: "/client", label: "Galleries", icon: FolderOpen }];
