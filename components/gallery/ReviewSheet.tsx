@@ -1,6 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, Lock } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { PAGE_ASPECT } from "../../lib/booklets";
+import { BookletPage } from "../booklet/BookletPage";
+import { BookletPreview } from "../booklet/BookletPreview";
 import { SelectionProgress } from "./SelectionProgress";
 import type { GalleryLayout, GalleryPhoto } from "./types";
 
@@ -38,6 +41,8 @@ export function ReviewSheet({
   onClose,
 }: ReviewSheetProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const previewLayout = layouts.find((layout) => layout.id === previewId && layout.pages.length > 0);
   const selectedLayout = layouts.find((layout) => layout.id === selectedLayoutId);
   const needsLayout = layouts.length > 0 && !selectedLayout;
   const canSubmit = !locked && !submitting && favourites.length > 0 && !needsLayout;
@@ -47,7 +52,7 @@ export function ReviewSheet({
     const { overflow } = document.body.style;
     document.body.style.overflow = "hidden";
     ref.current?.focus();
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && !document.querySelector('[aria-label$="booklet preview"]') && onClose();
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = overflow;
@@ -58,7 +63,7 @@ export function ReviewSheet({
 
   const steps = [
     { title: "You send your selection", body: "Your favourites are saved and locked in." },
-    { title: `${studioName} designs your book`, body: "You'll hear from the studio if anything needs a tweak." },
+    { title: `${studioName.charAt(0).toUpperCase()}${studioName.slice(1)} designs your book`, body: "You'll hear from the studio if anything needs a tweak." },
     { title: "Approve and print", body: "One final look, then it's off to print." },
   ];
 
@@ -94,37 +99,81 @@ export function ReviewSheet({
 
           {layouts.length > 0 && (
             <section aria-labelledby="layout-heading" className="space-y-4">
-              <h2 id="layout-heading" className="text-sm font-semibold text-trumi-ink">
-                Choose a layout
-              </h2>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="flex items-baseline justify-between gap-4">
+                <h2 id="layout-heading" className="text-sm font-semibold text-trumi-ink">
+                  Choose your booklet
+                </h2>
+                <p className="text-[13px] text-ink-soft">Tap a booklet to see your photos in it</p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {layouts.map((layout) => {
                   const active = layout.id === selectedLayoutId;
+                  const firstPage = layout.pages[0];
                   return (
-                    <button
+                    <div
                       key={layout.id}
-                      type="button"
-                      disabled={locked}
-                      aria-pressed={active}
-                      onClick={() => onSelectLayout(layout.id)}
                       className={cn(
-                        "flex flex-col gap-3 rounded-xl border bg-white p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trumi-red/40 disabled:cursor-default",
-                        active ? "border-trumi-ink shadow-[0_0_0_1px_#231F20]" : "border-hairline hover:border-trumi-ink/50",
+                        "flex flex-col overflow-hidden rounded-xl border bg-white transition",
+                        active ? "border-trumi-ink shadow-[0_0_0_1px_#231F20]" : "border-hairline",
                       )}
                     >
-                      <img src={layout.previewImageUrl} alt="" className="aspect-[4/3] w-full rounded-md bg-stone object-cover" />
-                      <span className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-trumi-ink">{layout.name}</span>
-                        {active && (
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-trumi-ink text-white">
-                            <Check size={12} strokeWidth={3} />
+                      <button
+                        type="button"
+                        onClick={() => setPreviewId(layout.id)}
+                        aria-label={`Preview ${layout.name} with your photos`}
+                        className="group flex h-48 items-center justify-center bg-[#ECEAE5] p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-trumi-red/40"
+                      >
+                        {firstPage ? (
+                          <span className="block h-full transition duration-500 ease-out group-hover:scale-[1.03]" style={{ aspectRatio: String(PAGE_ASPECT[layout.orientation]) }}>
+                            <BookletPage
+                              orientation={layout.orientation}
+                              slots={firstPage.slots}
+                              photos={favourites.slice(0, firstPage.slots.length).map((photo) => photo.thumbUrl)}
+                            />
                           </span>
+                        ) : (
+                          <img src={layout.previewImageUrl} alt="" className="h-full w-full rounded object-cover" />
                         )}
-                      </span>
-                      <span className="text-[13px] text-ink-soft">
-                        {layout.pageCount} photos{layout.description ? ` · ${layout.description}` : ""}
-                      </span>
-                    </button>
+                      </button>
+                      <div className="flex flex-1 flex-col gap-3 p-4">
+                        <div>
+                          <p className="font-semibold text-trumi-ink">{layout.name}</p>
+                          <p className="mt-0.5 text-[13px] text-ink-soft">
+                            {layout.capacity} photos{layout.pages.length ? ` · ${layout.pages.length} pages` : ""}
+                            {layout.description ? ` · ${layout.description}` : ""}
+                          </p>
+                        </div>
+                        <div className="mt-auto flex gap-2">
+                          {layout.pages.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewId(layout.id)}
+                              className="inline-flex h-10 flex-1 items-center justify-center rounded-full border border-hairline text-[13px] text-trumi-ink hover:border-trumi-ink"
+                            >
+                              Preview
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            disabled={locked}
+                            aria-pressed={active}
+                            onClick={() => onSelectLayout(layout.id)}
+                            className={cn(
+                              "inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold transition disabled:opacity-60",
+                              active ? "bg-trumi-ink text-white" : "bg-paper text-trumi-ink shadow-[0_0_0_1px_#E7E5E0] hover:shadow-[0_0_0_1px_#231F20]",
+                            )}
+                          >
+                            {active ? (
+                              <>
+                                <Check size={14} strokeWidth={3} /> Chosen
+                              </>
+                            ) : (
+                              "Choose"
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -223,14 +272,31 @@ export function ReviewSheet({
             )}
             <p className="text-center text-xs text-ink-soft">
               {needsLayout
-                ? "Choose a layout to continue"
+                ? "Choose a booklet to continue"
                 : favourites.length === 0
                   ? "Add at least one favourite to continue"
-                  : `${selectedLayout ? `${selectedLayout.name} · ` : ""}${favourites.length} photos`}
+                  : `${selectedLayout ? `${selectedLayout.name} · ` : ""}${favourites.length}${selectedLayout ? ` of ${selectedLayout.capacity}` : ""} photos`}
             </p>
           </div>
         </aside>
       </div>
+      {previewLayout && (
+        <BookletPreview
+          name={previewLayout.name}
+          description={previewLayout.description}
+          orientation={previewLayout.orientation}
+          pages={previewLayout.pages}
+          photos={favourites.map((photo) => photo.thumbUrl)}
+          selected={previewLayout.id === selectedLayoutId}
+          locked={locked}
+          studioName={studioName}
+          onChoose={() => {
+            onSelectLayout(previewLayout.id);
+            setPreviewId(null);
+          }}
+          onClose={() => setPreviewId(null)}
+        />
+      )}
     </div>
   );
 }

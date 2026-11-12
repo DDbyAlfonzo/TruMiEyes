@@ -10,6 +10,7 @@ import { readApiJson } from "../../lib/clientApi";
 import { getDisplayUrl, getDownloadUrl, getThumbnailUrl } from "../../lib/storage";
 import { canClientAccessProject, isSelectionLocked } from "../../lib/workflowRules";
 import type { LabelColor } from "../../lib/labels";
+import { bookletCapacity, parseSlots } from "../../lib/booklets";
 import { STUDIO_CONTACT_NAME } from "../../lib/studio";
 import { GalleryHeader } from "../../components/gallery/GalleryHeader";
 import { GalleryToolbar, MobileSelectionBar } from "../../components/gallery/GalleryToolbar";
@@ -93,7 +94,7 @@ export default function ClientGalleryPage({ project, coverUrl, layouts, photos, 
 
   const favourites = useMemo(() => photos.filter((photo) => states[photo.id]?.favourite), [photos, states]);
   const activeLayout = layouts.find((layout) => layout.id === layoutId) || (layouts.length === 1 ? layouts[0] : undefined);
-  const target = activeLayout?.pageCount ?? null;
+  const target = activeLayout?.capacity ?? null;
 
   const patch = (photoId: string, update: Partial<PhotoState>) =>
     setStates((prev) => ({ ...prev, [photoId]: { ...prev[photoId], ...update } }));
@@ -209,6 +210,7 @@ export default function ClientGalleryPage({ project, coverUrl, layouts, photos, 
         counts={counts}
         favouriteCount={counts.favourites}
         target={target}
+        bookletName={activeLayout?.name}
         locked={locked}
         onFilterChange={setFilter}
         onReview={() => setReviewOpen(true)}
@@ -256,6 +258,7 @@ export default function ClientGalleryPage({ project, coverUrl, layouts, photos, 
       <MobileSelectionBar
         favouriteCount={counts.favourites}
         target={target}
+        bookletName={activeLayout?.name}
         locked={locked}
         onReview={() => setReviewOpen(true)}
       />
@@ -316,7 +319,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
   const project = await prisma.clientProject.findUnique({
     where: { id: projectId },
     include: {
-      layouts: { include: { layout: true } },
+      layouts: { include: { layout: { include: { pages: { orderBy: { index: "asc" } } } } } },
       images: {
         where: { status: { in: ["CLIENT_REVIEW", "APPROVED"] } },
         include: {
@@ -378,9 +381,15 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
           id: layout.id,
           name: layout.name,
           description: layout.description,
-          pageCount: layout.pageCount,
+          capacity: bookletCapacity(layout.pages.map((page) => ({ slots: parseSlots(page.slots) })), layout.pageCount),
           orientation: layout.orientation,
           previewImageUrl: await getDisplayUrl(layout.previewImagePath, "/bg.jpg"),
+          pages: await Promise.all(
+            layout.pages.map(async (page) => ({
+              sketchUrl: getThumbnailUrl(await getDisplayUrl(page.sketchPath, "/bg.jpg"), 1200),
+              slots: parseSlots(page.slots),
+            })),
+          ),
         })),
       ),
       photos,

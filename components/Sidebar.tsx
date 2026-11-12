@@ -13,7 +13,7 @@ type SidebarProps = {
 const adminNav = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/projects", label: "Projects", icon: FolderOpen },
-  { href: "/admin/layouts", label: "Layouts", icon: Layers },
+  { href: "/admin/layouts", label: "Booklets", icon: Layers },
   { href: "/admin/users", label: "Users", icon: Users },
 ];
 

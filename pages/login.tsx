@@ -1,60 +1,40 @@
-import { useState } from "react";
-import { signIn, signOut } from "next-auth/react";
+import Head from "next/head";
+import { FormEvent, useState } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/router";
-import { KeyRound, Mail } from "lucide-react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { readApiMessage } from "../lib/clientApi";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { BrandMark } from "../components/BrandMark";
+import { STUDIO_CONTACT_NAME } from "../lib/studio";
 
-export default function LoginPage() {
+const fieldClass =
+  "h-12 w-full rounded-xl border border-white/15 bg-white/[0.06] px-4 text-[15px] text-white outline-none transition placeholder:text-white/35 focus:border-white/60 focus:bg-white/[0.09]";
+
+export default function LoginPage({ afterSignIn }: { afterSignIn?: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
-  const [roleView, setRoleView] = useState<"ADMIN" | "CLIENT">("CLIENT");
-  const [resetMessage, setResetMessage] = useState("");
   const [resetting, setResetting] = useState(false);
 
-  const handleLogin = async (event: React.FormEvent) => {
+  const handleLogin = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
-    setResetMessage("");
+    setNotice("");
     setLoading(true);
     try {
-      const result = await signIn("credentials", {
-        email: email.trim().toLowerCase(),
-        password,
-        redirect: false,
-      });
-      if (result?.error) {
-        setError("Invalid credentials. Please try again.");
+      const result = await signIn("credentials", { email: email.trim().toLowerCase(), password, redirect: false });
+      if (!result?.ok || result.error) {
+        setError("That email and password don't match. Try again or reset your password.");
         return;
       }
-
-      const sessionRes = await fetch("/api/auth/session");
-      if (!sessionRes.ok) {
-        setError("Signed in, but we could not load your account details. Please try again.");
-        return;
-      }
-
-      const session = await sessionRes.json();
+      const session = await (await fetch("/api/auth/session")).json().catch(() => null);
       const role = session?.user?.role as "ADMIN" | "CLIENT" | undefined;
-      if (!role) {
-        setError("Your account role could not be determined. Please try again.");
-        return;
-      }
-
-      if (roleView !== role) {
-        await signOut({ redirect: false });
-        setError(`This account is ${role.toLowerCase()}. Switch to the ${role.toLowerCase()} tab and try again.`);
-        return;
-      }
-
-      router.replace(role === "ADMIN" ? "/admin" : "/client");
+      await router.replace(afterSignIn || (role === "ADMIN" ? "/admin" : "/client"));
     } catch {
-      setError("Unable to sign in right now. Please try again.");
+      setError("We couldn't sign you in just now. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -62,133 +42,116 @@ export default function LoginPage() {
 
   const handleReset = async () => {
     if (!email.trim()) {
-      setError("Enter your email to reset your password.");
+      setError("Enter your email above, then tap “Forgot password” again.");
       return;
     }
     setError("");
-    setResetMessage("");
+    setNotice("");
     setResetting(true);
-
     try {
       const res = await fetch("/api/auth/request-reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
-      if (res.ok) {
-        setResetMessage(
-          "If this email is associated with a user on our platform, you’ll receive a reset link shortly.",
-        );
-      } else {
-        setError(await readApiMessage(res, "Unable to send reset email."));
-      }
+      if (res.ok) setNotice("If that email has an account, a reset link is on its way.");
+      else setError(await readApiMessage(res, "We couldn't send a reset link."));
     } catch {
-      setError("Unable to send reset email.");
+      setError("We couldn't send a reset link.");
     } finally {
       setResetting(false);
     }
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background text-white">
-      <div className="absolute inset-0">
-        <img src="/bg.jpg" alt="" className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-black/35 lg:bg-black/20" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-black/50 lg:from-black/70 lg:via-black/25 lg:to-black/45" />
-        <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-black/45 via-transparent to-transparent lg:w-3/5" />
-      </div>
+    <main className="min-h-[100svh] bg-trumi-ink text-white lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(440px,0.85fr)]">
+      <Head>
+        <title>Sign in | TruMiEyes</title>
+        <meta name="theme-color" content="#231F20" />
+      </Head>
 
-      <div className="relative grid min-h-screen lg:grid-cols-[minmax(0,1.1fr)_minmax(420px,0.9fr)]">
-        <section className="relative hidden min-h-screen items-end px-12 pb-16 lg:flex xl:px-20 xl:pb-20">
-          <div className="max-w-2xl">
-            <p className="page-kicker">Private client proofing</p>
-            <h1 className="mt-4 font-display text-7xl font-light leading-none tracking-wide drop-shadow-[0_5px_28px_rgba(0,0,0,0.82)] xl:text-8xl">
-              Your story, presented with care.
-            </h1>
-            <p className="mt-6 max-w-md text-base leading-7 text-zinc-100 drop-shadow-[0_3px_18px_rgba(0,0,0,0.82)]">
-              A refined workspace for reviewing sessions, selecting favourites, and preparing final image delivery.
-            </p>
-          </div>
-        </section>
+      <section className="relative h-[34vh] min-h-[240px] overflow-hidden lg:h-auto lg:min-h-[100svh]">
+        <img src="/bg.jpg" alt="" className="absolute inset-0 h-full w-full object-cover object-[60%_40%] animate-tile-in" />
+        <div className="absolute inset-0 bg-gradient-to-t from-trumi-ink via-trumi-ink/20 to-trumi-ink/30 lg:bg-gradient-to-r lg:from-trumi-ink/10 lg:via-transparent lg:to-trumi-ink" />
+        <div className="absolute inset-x-0 bottom-0 hidden p-12 lg:block xl:p-16">
+          <p className="text-[11px] uppercase tracking-brand text-white/80">Studio</p>
+          <p className="mt-3 max-w-md font-display text-5xl font-extralight leading-[1.05]">Every gallery, booklet and selection in one place.</p>
+        </div>
+      </section>
 
-        <section className="relative flex min-h-screen items-center justify-center px-5 py-10">
-          <div className="relative w-full max-w-md">
-            <div className="mb-6 rounded-3xl border border-white/10 bg-black/35 p-6 shadow-2xl shadow-black/30 backdrop-blur-md lg:hidden">
-              <p className="page-kicker">Private client proofing</p>
-              <h1 className="mt-3 font-display text-4xl font-light leading-tight tracking-wide drop-shadow-[0_4px_18px_rgba(0,0,0,0.75)]">
-                Your story, presented with care.
-              </h1>
-              <p className="mt-4 text-sm leading-6 text-zinc-100 drop-shadow-[0_2px_12px_rgba(0,0,0,0.75)]">
-                Review sessions, select favourites, and prepare final image delivery in one refined workspace.
-              </p>
-            </div>
+      <section className="relative -mt-10 flex justify-center px-6 pb-12 lg:mt-0 lg:items-center lg:px-12 lg:py-16">
+        <div className="w-full max-w-[400px] animate-tile-in">
+          <img src="/brand/logo-stacked-white.svg" alt="TruMiEyes" className="mb-12 w-40" />
 
-            <div className="rounded-3xl border border-white/10 bg-[rgba(10,10,10,0.56)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-[20px] md:p-8">
-              <div className="mb-8 flex flex-col items-center text-center">
-                <BrandMark size="lg" />
-                <div className="mt-5 h-px w-20 bg-brand-red/40" />
-              </div>
+          <h1 className="font-display text-4xl font-extralight leading-tight">Welcome back</h1>
+          <p className="mt-2 text-[15px] text-white/65">Sign in to manage galleries and booklets.</p>
 
-              <div className="mb-8 grid grid-cols-2 rounded-full border border-white/10 bg-black/25 p-1 shadow-inner shadow-black/30">
-                {(["CLIENT", "ADMIN"] as const).map((role) => (
-                  <button
-                    key={role}
-                    className={`rounded-full px-4 py-2 text-sm transition ${
-                      roleView === role
-                        ? "bg-brand-red text-white shadow-lg shadow-brand-red/20"
-                        : "text-zinc-300 hover:bg-white/5 hover:text-white"
-                    }`}
-                    onClick={() => setRoleView(role)}
-                    type="button"
-                  >
-                    {role === "CLIENT" ? "Client" : "Admin"}
-                  </button>
-                ))}
-              </div>
-
-              <form onSubmit={handleLogin} className="space-y-5">
-                <label className="block">
-                  <span className="mb-2 flex items-center gap-2 text-sm text-zinc-400">
-                    <Mail size={15} /> Email
-                  </span>
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    required
-                    autoComplete="email"
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-2 flex items-center gap-2 text-sm text-zinc-400">
-                    <KeyRound size={15} /> Password
-                  </span>
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    required
-                    autoComplete="current-password"
-                  />
-                </label>
-                {error && <p className="text-sm text-red-300">{error}</p>}
-                {resetMessage && <p className="text-sm text-emerald-300">{resetMessage}</p>}
-                <Button type="submit" className="w-full" disabled={loading || resetting}>
-                  {loading ? "Signing in..." : "Enter portal"}
-                </Button>
+          <form onSubmit={handleLogin} className="mt-9 space-y-5" noValidate>
+            <label className="block space-y-2">
+              <span className="text-sm text-white/75">Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+                inputMode="email"
+                required
+                className={fieldClass}
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="flex items-center justify-between text-sm text-white/75">
+                Password
                 <button
                   type="button"
-                  className="w-full text-sm text-zinc-500 transition hover:text-white"
                   onClick={handleReset}
                   disabled={loading || resetting}
+                  className="text-[13px] text-white/60 underline-offset-4 hover:text-white hover:underline"
                 >
-                  {resetting ? "Sending reset link..." : "Forgot password?"}
+                  {resetting ? "Sending…" : "Forgot password?"}
                 </button>
-              </form>
-            </div>
+              </span>
+              <span className="relative block">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  required
+                  className={`${fieldClass} pr-12`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-1 top-1 inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/55 hover:text-white"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </span>
+            </label>
+
+            <p aria-live="polite" className="min-h-[1.25rem] text-sm leading-6">
+              {error && <span className="text-[#F7B2B5]">{error}</span>}
+              {notice && <span className="text-emerald-200">{notice}</span>}
+            </p>
+
+            <button
+              type="submit"
+              disabled={loading || resetting || !email || !password}
+              className="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-trumi-red text-[15px] font-semibold text-white transition hover:bg-trumi-red-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-trumi-ink disabled:opacity-50"
+            >
+              {loading ? "Signing in…" : "Sign in"}
+              {!loading && <ArrowRight size={17} />}
+            </button>
+          </form>
+
+          <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm leading-6 text-white/70">
+            <span className="font-semibold text-white">Looking for your photos?</span> Open the gallery link {STUDIO_CONTACT_NAME} sent you and enter your
+            code — no password needed.
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
     </main>
   );
 }

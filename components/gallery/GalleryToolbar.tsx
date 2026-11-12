@@ -8,6 +8,7 @@ type GalleryToolbarProps = {
   counts: Record<GalleryFilter, number>;
   favouriteCount: number;
   target?: number | null;
+  bookletName?: string | null;
   locked: boolean;
   onFilterChange: (filter: GalleryFilter) => void;
   onReview: () => void;
@@ -25,6 +26,7 @@ export function GalleryToolbar({
   counts,
   favouriteCount,
   target,
+  bookletName,
   locked,
   onFilterChange,
   onReview,
@@ -57,7 +59,7 @@ export function GalleryToolbar({
         </div>
 
         <div className="hidden shrink-0 items-center gap-5 md:flex">
-          <SelectionProgress count={favouriteCount} target={target} className="w-56" />
+          <SelectionProgress count={favouriteCount} target={target} bookletName={bookletName} className="w-60" />
           <button
             type="button"
             onClick={onReview}
@@ -78,11 +80,12 @@ export function MobileSelectionBar({
   target,
   locked,
   onReview,
-}: Pick<GalleryToolbarProps, "favouriteCount" | "target" | "locked" | "onReview">) {
+  bookletName,
+}: Pick<GalleryToolbarProps, "favouriteCount" | "target" | "bookletName" | "locked" | "onReview">) {
   return (
     <div className="fixed inset-x-3 bottom-0 z-30 pb-safe md:hidden">
       <div className="flex items-center gap-3 rounded-full bg-trumi-ink py-2 pl-5 pr-2 text-white shadow-[0_14px_36px_rgba(35,31,32,0.35)]">
-        <SelectionProgress count={favouriteCount} target={target} tone="dark" className="flex-1" />
+        <SelectionProgress count={favouriteCount} target={target} bookletName={bookletName} tone="dark" className="min-w-0 flex-1" />
         <button
           type="button"
           onClick={onReview}
