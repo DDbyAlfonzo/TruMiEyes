@@ -68,7 +68,7 @@ export default function AdminSettingsPage({ account }: SettingsProps) {
 
       <Card className="max-w-3xl overflow-hidden bg-surface/80 shadow-2xl shadow-black/20 backdrop-blur-xl">
         <div className="border-b border-line p-6">
-          <h3 className="font-serif text-3xl font-light">Profile</h3>
+          <h3 className="font-display text-3xl font-light">Profile</h3>
           <p className="mt-2 text-sm text-muted">These details are used inside the admin workspace.</p>
         </div>
 

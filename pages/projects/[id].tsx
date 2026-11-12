@@ -1,47 +1,29 @@
 import { GetServerSideProps } from "next";
-import { useMemo, useState } from "react";
+import Head from "next/head";
+import { useCallback, useMemo, useState } from "react";
 import { getServerSession } from "next-auth";
-import { Download, Heart } from "lucide-react";
+import { ArrowDown } from "lucide-react";
+import { toast } from "sonner";
 import { authOptions } from "../api/auth/[...nextauth]";
 import { prisma } from "../../lib/prisma";
 import { readApiJson } from "../../lib/clientApi";
-import { getDisplayUrl, getDownloadUrl } from "../../lib/storage";
-import Lightbox from "../../components/Lightbox";
+import { getDisplayUrl, getDownloadUrl, getThumbnailUrl } from "../../lib/storage";
 import { canClientAccessProject, isSelectionLocked } from "../../lib/workflowRules";
-import { AppShell } from "../../components/AppShell";
-import { StatusBadge } from "../../components/StatusBadge";
-import { SelectionBar } from "../../components/SelectionBar";
-import { EmptyState } from "../../components/EmptyState";
-import { PhotoCard } from "../../components/PhotoCard";
-import { CommentPanel } from "../../components/CommentPanel";
-import { Textarea } from "../../components/ui/textarea";
-import { Button } from "../../components/ui/button";
-import { ImageWithFallback } from "../../components/ImageWithFallback";
-import { BrandMark } from "../../components/BrandMark";
-
-type Layout = {
-  id: string;
-  name: string;
-  previewImageUrl: string;
-  description: string | null;
-};
-
-type ProjectImage = {
-  id: string;
-  imageUrl: string;
-  downloadUrl: string;
-  filename: string;
-  downloadable: boolean;
-  status: string;
-  uploadedAt: string;
-  comments: PhotoComment[];
-};
-
-type PhotoComment = {
-  id: string;
-  message: string;
-  createdAt: string;
-};
+import type { LabelColor } from "../../lib/labels";
+import { bookletCapacity, parseSlots } from "../../lib/booklets";
+import { STUDIO_CONTACT_NAME } from "../../lib/studio";
+import { GalleryHeader } from "../../components/gallery/GalleryHeader";
+import { GalleryToolbar, MobileSelectionBar } from "../../components/gallery/GalleryToolbar";
+import { PhotoTile } from "../../components/gallery/PhotoTile";
+import { ProofingLightbox } from "../../components/gallery/ProofingLightbox";
+import { ReviewSheet } from "../../components/gallery/ReviewSheet";
+import type {
+  GalleryComment,
+  GalleryFilter,
+  GalleryLayout,
+  GalleryPhoto,
+  PhotoState,
+} from "../../components/gallery/types";
 
 type Props = {
   project: {
@@ -51,376 +33,336 @@ type Props = {
     status: string;
     requestMessage: string | null;
     createdAt: string;
+    shareUrl: string | null;
   };
-  layouts: Layout[];
-  images: ProjectImage[];
-  existingSelection: {
+  coverUrl: string | null;
+  layouts: GalleryLayout[];
+  photos: (GalleryPhoto & { comments: GalleryComment[]; label: LabelColor | null })[];
+  favouriteIds: string[];
+  selection: {
     selectedLayoutId: string | null;
     notes: string | null;
-    selectedImages: string[];
     approvalStatus: string;
   } | null;
-  favoriteIds: string[];
-  requestHistory: { id: string; message: string; createdAt: string }[];
 };
 
-export default function ProjectDetailPage({
-  project,
-  layouts,
-  images,
-  existingSelection,
-  favoriteIds,
-  requestHistory,
-}: Props) {
-  const [selectedLayout, setSelectedLayout] = useState(existingSelection?.selectedLayoutId || "");
-  const [favoriteImages, setFavoriteImages] = useState(
-    new Set(favoriteIds.length ? favoriteIds : existingSelection?.selectedImages || []),
-  );
-  const [notes, setNotes] = useState(existingSelection?.notes || "");
-  const [commentsByImage, setCommentsByImage] = useState(
-    Object.fromEntries(images.map((image) => [image.id, image.comments])),
-  );
-  const [draftComments, setDraftComments] = useState<Record<string, string>>({});
-  const [viewFavoritesOnly, setViewFavoritesOnly] = useState(false);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [activeAction, setActiveAction] = useState<string | null>(null);
+type ProjectStatus = "DRAFT" | "SHARED" | "IN_REVIEW" | "APPROVED" | "COMPLETED";
+type ApprovalStatus = "PENDING" | "SUBMITTED" | "APPROVED";
+
+const jsonPost = (url: string, body: unknown, method = "POST") =>
+  fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+export default function ClientGalleryPage({ project, coverUrl, layouts, photos, favouriteIds, selection }: Props) {
+  const [approvalStatus, setApprovalStatus] = useState(selection?.approvalStatus || "PENDING");
+  const [states, setStates] = useState<Record<string, PhotoState>>(() => {
+    const favourites = new Set(favouriteIds);
+    return Object.fromEntries(
+      photos.map((photo) => [photo.id, { favourite: favourites.has(photo.id), label: photo.label, comments: photo.comments }]),
+    );
+  });
+  const [filter, setFilter] = useState<GalleryFilter>("all");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [layoutId, setLayoutId] = useState(selection?.selectedLayoutId || (layouts.length === 1 ? layouts[0].id : ""));
+  const [notes, setNotes] = useState(selection?.notes || "");
+  const [submitting, setSubmitting] = useState(false);
 
-  const locked = isSelectionLocked(
-    existingSelection?.approvalStatus as "PENDING" | "SUBMITTED" | "APPROVED" | undefined,
-    project.status as "DRAFT" | "SHARED" | "IN_REVIEW" | "APPROVED" | "COMPLETED",
-  );
-  const visibleImages = useMemo(
-    () => images.filter((image) => !viewFavoritesOnly || favoriteImages.has(image.id)),
-    [favoriteImages, images, viewFavoritesOnly],
-  );
-  const selectedCount = favoriteImages.size;
+  const locked = isSelectionLocked(approvalStatus as ApprovalStatus, project.status as ProjectStatus);
+  const submitted = approvalStatus !== "PENDING";
 
-  const toggleFavorite = async (photoId: string) => {
+  const visible = useMemo(
+    () =>
+      photos.filter((photo) => {
+        const state = states[photo.id];
+        if (filter === "favourites") return state.favourite;
+        if (filter === "labelled") return Boolean(state.label);
+        if (filter === "comments") return state.comments.length > 0;
+        return true;
+      }),
+    [filter, photos, states],
+  );
+
+  const counts = useMemo(() => {
+    const values = Object.values(states);
+    return {
+      all: photos.length,
+      favourites: values.filter((s) => s.favourite).length,
+      labelled: values.filter((s) => s.label).length,
+      comments: values.filter((s) => s.comments.length > 0).length,
+    };
+  }, [photos.length, states]);
+
+  const favourites = useMemo(() => photos.filter((photo) => states[photo.id]?.favourite), [photos, states]);
+  const activeLayout = layouts.find((layout) => layout.id === layoutId) || (layouts.length === 1 ? layouts[0] : undefined);
+  const target = activeLayout?.capacity ?? null;
+
+  const patch = (photoId: string, update: Partial<PhotoState>) =>
+    setStates((prev) => ({ ...prev, [photoId]: { ...prev[photoId], ...update } }));
+
+  const toggleFavourite = useCallback(
+    async (photoId: string) => {
+      if (locked) return;
+      const was = states[photoId]?.favourite;
+      patch(photoId, { favourite: !was });
+      try {
+        await readApiJson(await jsonPost("/api/favorites", { photoId }, was ? "DELETE" : "POST"), "Couldn't save that favourite.");
+      } catch (error) {
+        patch(photoId, { favourite: was });
+        toast.error(error instanceof Error ? error.message : "Couldn't save that favourite.");
+      }
+    },
+    [locked, states],
+  );
+
+  const setLabel = async (photoId: string, color: LabelColor | null) => {
     if (locked) return;
-    const wasFavorite = favoriteImages.has(photoId);
-    setFavoriteImages((prev) => {
-      const next = new Set(prev);
-      if (wasFavorite) next.delete(photoId);
-      else next.add(photoId);
-      return next;
-    });
-    setError("");
-    setActiveAction(`favorite:${photoId}`);
-
+    const previous = states[photoId]?.label ?? null;
+    patch(photoId, { label: color });
     try {
-      await readApiJson(
-        await fetch("/api/favorites", {
-          method: wasFavorite ? "DELETE" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ photoId }),
-        }),
-        "Unable to update favourites right now.",
-      );
-    } catch (err) {
-      setFavoriteImages((prev) => {
-        const next = new Set(prev);
-        if (wasFavorite) next.add(photoId);
-        else next.delete(photoId);
-        return next;
-      });
-      setError(err instanceof Error ? err.message : "Unable to update favourites right now.");
-    } finally {
-      setActiveAction(null);
+      await readApiJson(await jsonPost("/api/labels", { photoId, color }), "Couldn't save that label.");
+    } catch (error) {
+      patch(photoId, { label: previous });
+      toast.error(error instanceof Error ? error.message : "Couldn't save that label.");
     }
   };
 
-  const submitComment = async (photoId: string) => {
-    const draft = draftComments[photoId]?.trim();
-    if (!draft) return;
-    setError("");
-    setMessage("");
-    setActiveAction(`comment:${photoId}`);
+  const addComment = async (photoId: string, message: string) => {
     try {
-      const saved = await readApiJson<PhotoComment>(
-        await fetch("/api/comments", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ photoId, message: draft }),
-        }),
-        "Unable to save the comment right now.",
+      const saved = await readApiJson<GalleryComment & { createdAt: string }>(
+        await jsonPost("/api/comments", { photoId, message }),
+        "Couldn't save your note.",
       );
-      setCommentsByImage((prev) => ({
+      setStates((prev) => ({
         ...prev,
-        [photoId]: [...(prev[photoId] || []), saved],
+        [photoId]: {
+          ...prev[photoId],
+          comments: [...prev[photoId].comments, { id: saved.id, message: saved.message, createdAt: String(saved.createdAt) }],
+        },
       }));
-      setDraftComments((prev) => ({ ...prev, [photoId]: "" }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save the comment right now.");
-    } finally {
-      setActiveAction(null);
+      return true;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't save your note.");
+      return false;
     }
   };
 
   const submitSelection = async () => {
     if (locked) return;
-    setError("");
-    setMessage("");
-    setActiveAction("submit");
+    setSubmitting(true);
     try {
       await readApiJson(
-        await fetch("/api/selections", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            projectId: project.id,
-            selectedLayoutId: selectedLayout || null,
-            notes,
-            selectedImageIds: Array.from(favoriteImages),
-          }),
+        await jsonPost("/api/selections", {
+          projectId: project.id,
+          selectedLayoutId: activeLayout?.id || null,
+          notes,
+          selectedImageIds: favourites.map((photo) => photo.id),
         }),
-        "Unable to submit your selection right now.",
+        "Couldn't send your selection.",
       );
-      setMessage("Selection submitted for review.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to submit your selection right now.");
+      setApprovalStatus("SUBMITTED");
+      toast.success(`Sent to ${STUDIO_CONTACT_NAME}. You'll hear back soon.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't send your selection.");
     } finally {
-      setActiveAction(null);
+      setSubmitting(false);
     }
   };
 
-  return (
-    <AppShell role="client" title={project.title} eyebrow="Gallery">
-      <div className="space-y-10">
-        <header className="relative overflow-hidden rounded-3xl border border-line bg-surface">
-          <div className="absolute inset-0">
-            <ImageWithFallback
-              src={images[0]?.imageUrl || "/bg.jpg"}
-              alt=""
-              className="h-full w-full object-cover opacity-30"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/25" />
-          </div>
-          <div className="relative px-5 py-12 md:px-10 md:py-16">
-            <div className="max-w-3xl">
-              <BrandMark className="mb-8" />
-              <p className="page-kicker">Client gallery</p>
-              <h1 className="editorial-title mt-3">{project.title}</h1>
-              {project.description && <p className="mt-4 max-w-2xl leading-7 text-muted">{project.description}</p>}
-              <div className="mt-6 flex flex-wrap gap-2">
-                <StatusBadge status={project.status} />
-                <span className="rounded-full border border-line px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-zinc-400">
-                  {images.length} photos
-                </span>
-                <span className="rounded-full border border-line px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-zinc-400">
-                  {new Date(project.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-          </div>
-        </header>
+  const openPhoto = (photoId: string) => setLightboxIndex(visible.findIndex((photo) => photo.id === photoId));
 
+  return (
+    <div className="gallery-theme min-h-screen">
+      <Head>
+        <title>{`${project.title} | TruMiEyes`}</title>
+        <meta name="theme-color" content="#FAFAF8" />
+      </Head>
+
+      <GalleryHeader shareUrl={project.shareUrl} shareTitle={project.title} />
+
+      <section className="relative h-[52vh] min-h-[340px] overflow-hidden bg-trumi-ink md:h-[68vh] md:max-h-[680px]">
+        {coverUrl && (
+          <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover animate-tile-in" fetchPriority="high" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-trumi-ink/0 via-trumi-ink/10 to-trumi-ink/75" />
+        <div className="absolute inset-x-0 bottom-0">
+          <div className="mx-auto flex max-w-[1360px] flex-wrap items-end justify-between gap-6 px-4 pb-8 md:px-10 md:pb-14">
+            <div className="max-w-3xl space-y-3 text-white">
+              <p className="text-[11px] uppercase tracking-brand text-white/85">
+                {photos.length} photos · {new Date(project.createdAt).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+              </p>
+              <h1 className="break-words font-display text-5xl font-extralight leading-[0.95] md:text-7xl lg:text-8xl">
+                {project.title}
+              </h1>
+              {project.description && <p className="max-w-xl text-[15px] leading-7 text-white/85">{project.description}</p>}
+            </div>
+            <a
+              href="#photos"
+              className="inline-flex h-12 items-center gap-2.5 rounded-full bg-white px-6 text-sm font-semibold text-trumi-ink transition hover:bg-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-trumi-ink"
+            >
+              View photos <ArrowDown size={16} />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <GalleryToolbar
+        filter={filter}
+        counts={counts}
+        favouriteCount={counts.favourites}
+        target={target}
+        bookletName={activeLayout?.name}
+        locked={locked}
+        onFilterChange={setFilter}
+        onReview={() => setReviewOpen(true)}
+      />
+
+      <main className="mx-auto max-w-[1360px] px-2 pb-32 pt-6 md:px-10 md:pb-20 md:pt-8">
         {project.status === "IN_REVIEW" && (
-          <div className="border-l-2 border-brand-red bg-surface p-4 text-sm text-zinc-300">
-            <p className="font-semibold text-white">Changes requested</p>
-            <p className="mt-1">{project.requestMessage || "Please update your selection and resubmit."}</p>
+          <div className="mx-2 mb-6 rounded-xl bg-white p-4 text-sm leading-6 shadow-[0_0_0_1px_#E7E5E0] md:mx-0">
+            <p className="font-semibold text-trumi-ink">{STUDIO_CONTACT_NAME === "the studio" ? "The studio" : STUDIO_CONTACT_NAME} asked for a few changes</p>
+            <p className="text-ink-soft">{project.requestMessage || "Update your favourites and send them again."}</p>
           </div>
         )}
         {locked && (
-          <div className="border-l-2 border-emerald-400 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-            Your submitted selection is locked. Ask the admin to reopen this gallery if changes are needed.
+          <div className="mx-2 mb-6 rounded-xl bg-white p-4 text-sm leading-6 shadow-[0_0_0_1px_#E7E5E0] md:mx-0">
+            <p className="font-semibold text-trumi-ink">Your selection is with {STUDIO_CONTACT_NAME}</p>
+            <p className="text-ink-soft">You can still browse, download and leave notes on photos.</p>
           </div>
         )}
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        {message && <p className="text-sm text-emerald-300">{message}</p>}
 
-        {layouts.length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="font-serif text-3xl font-light">Layout choice</h2>
-              <span className="text-sm text-zinc-500">{selectedLayout ? "Selected" : "Optional"}</span>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {layouts.map((layout) => (
-                <button
-                  key={layout.id}
-                  onClick={() => setSelectedLayout(layout.id)}
-                  disabled={locked}
-                  aria-label={`Select layout ${layout.name}`}
-                className={`bg-surface p-3 text-left transition ${
-                  selectedLayout === layout.id
-                      ? "border border-brand-red"
-                      : "border border-line hover:border-brand-red/60"
-                  }`}
-                >
-                  <ImageWithFallback
-                    src={layout.previewImageUrl}
-                    alt={layout.name}
-                    className="aspect-[4/3] w-full object-cover"
-                  />
-                  <p className="mt-3 font-semibold">{layout.name}</p>
-                  <p className="mt-1 text-sm text-white/55">{layout.description}</p>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="space-y-5">
-          <SelectionBar
-            selectedCount={selectedCount}
-            viewFavoritesOnly={viewFavoritesOnly}
-            submitting={activeAction === "submit"}
-            locked={locked}
-            onToggleFilter={() => setViewFavoritesOnly((value) => !value)}
-            onSubmit={submitSelection}
-          />
-
-          {images.length === 0 && (
-            <EmptyState
-              title="No photos available yet"
-              description="Your gallery will appear here once images are ready for review."
-            />
-          )}
-          {images.length > 0 && visibleImages.length === 0 && (
-            <EmptyState
-              title="No favourites selected yet"
-              description="Return to all photos and mark your preferred images."
-            />
-          )}
-
-          <div className="columns-1 gap-5 sm:columns-2 lg:columns-3 2xl:columns-4 [&>*]:mb-5">
-            {visibleImages.map((image) => {
-              const sourceIndex = images.findIndex((item) => item.id === image.id);
-              const isFavorite = favoriteImages.has(image.id);
-              const comments = commentsByImage[image.id] || [];
-              return (
-                <div key={image.id} className="break-inside-avoid">
-                  <PhotoCard
-                    imageUrl={image.imageUrl}
-                    downloadUrl={image.downloadUrl}
-                    filename={image.filename}
-                    selected={isFavorite}
-                    downloadable={image.downloadable}
-                    commentCount={comments.length}
-                    onOpen={() => setLightboxIndex(sourceIndex)}
-                    onToggleFavorite={() => toggleFavorite(image.id)}
-                  />
-                  <div className="border-x border-b border-line bg-surface px-3 pb-3">
-                    <CommentPanel
-                      comments={comments}
-                      value={draftComments[image.id] || ""}
-                      onChange={(value) =>
-                        setDraftComments((prev) => ({ ...prev, [image.id]: value }))
-                      }
-                      onSubmit={() => submitComment(image.id)}
-                      saving={activeAction === `comment:${image.id}`}
-                      compact
-                    />
-                  </div>
-                </div>
-              );
-            })}
+        {photos.length === 0 ? (
+          <EmptyMessage title="Your photos are on their way" body="This gallery will fill up as soon as your edits are ready." />
+        ) : visible.length === 0 ? (
+          <EmptyMessage title="Nothing here yet" body="Heart, label or comment on a photo and it will show up in this view." />
+        ) : (
+          <div className="columns-2 gap-2 md:columns-3 md:gap-3 xl:columns-4">
+            {visible.map((photo, index) => (
+              <PhotoTile
+                key={photo.id}
+                photo={photo}
+                state={states[photo.id]}
+                index={index}
+                locked={locked}
+                onOpen={() => openPhoto(photo.id)}
+                onToggleFavourite={() => toggleFavourite(photo.id)}
+              />
+            ))}
           </div>
-        </section>
+        )}
+      </main>
 
-        <section className="space-y-3 thin-divider pt-6">
-          <h2 className="font-serif text-3xl font-light">Selection notes</h2>
-          <Textarea
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="Add any preferences, retouching notes, or delivery requests..."
-            disabled={locked}
-          />
-        </section>
+      <footer className="border-t border-hairline py-10 text-center">
+        <img src="/brand/wordmark.svg" alt="TruMiEyes" className="mx-auto h-3 w-auto opacity-80" />
+      </footer>
 
-        <section className="space-y-3 thin-divider pt-6">
-          <h2 className="font-serif text-3xl font-light">Request history</h2>
-          {requestHistory.length === 0 && <p className="text-white/55">No change requests yet.</p>}
-          {requestHistory.map((entry) => (
-            <div key={entry.id} className="rounded-3xl border border-line bg-surface p-4">
-              <p className="text-xs text-zinc-500">{new Date(entry.createdAt).toLocaleString()}</p>
-              <p className="mt-2 text-white/70">{entry.message}</p>
-            </div>
-          ))}
-        </section>
-      </div>
+      <MobileSelectionBar
+        favouriteCount={counts.favourites}
+        target={target}
+        bookletName={activeLayout?.name}
+        locked={locked}
+        onReview={() => setReviewOpen(true)}
+      />
 
-      {lightboxIndex !== null && (
-        <Lightbox
-          items={images}
-          initialIndex={lightboxIndex}
+      {lightboxIndex !== null && lightboxIndex >= 0 && visible.length > 0 && (
+        <ProofingLightbox
+          photos={visible}
+          states={states}
+          index={Math.min(lightboxIndex, visible.length - 1)}
+          locked={locked}
+          studioName={STUDIO_CONTACT_NAME}
+          onIndexChange={setLightboxIndex}
           onClose={() => setLightboxIndex(null)}
-          renderActions={(image) => (
-            <div className="hidden items-center gap-2 sm:flex">
-              {image.downloadable && (
-                <a
-                  className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 px-4 text-sm"
-                  href={image.downloadUrl}
-                  download={image.filename}
-                >
-                  <Download size={15} />
-                  Download
-                </a>
-              )}
-              <Button
-                variant={favoriteImages.has(image.id) ? "primary" : "outline"}
-                onClick={() => toggleFavorite(image.id)}
-                disabled={locked}
-              >
-                <Heart size={15} className={favoriteImages.has(image.id) ? "fill-black" : ""} />
-                {favoriteImages.has(image.id) ? "Favourite" : "Select"}
-              </Button>
-            </div>
-          )}
+          onToggleFavourite={toggleFavourite}
+          onSetLabel={setLabel}
+          onAddComment={addComment}
         />
       )}
-    </AppShell>
+
+      {reviewOpen && (
+        <ReviewSheet
+          layouts={layouts}
+          selectedLayoutId={activeLayout?.id || ""}
+          favourites={favourites}
+          notes={notes}
+          locked={locked}
+          submitting={submitting}
+          submitted={submitted}
+          target={target}
+          studioName={STUDIO_CONTACT_NAME}
+          onSelectLayout={setLayoutId}
+          onNotesChange={setNotes}
+          onSubmit={submitSelection}
+          onClose={() => setReviewOpen(false)}
+        />
+      )}
+    </div>
   );
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
+function EmptyMessage({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="mx-2 rounded-xl border border-dashed border-hairline px-6 py-20 text-center md:mx-0">
+      <p className="font-display text-2xl font-light text-trumi-ink">{title}</p>
+      <p className="mt-2 text-sm text-ink-soft">{body}</p>
+    </div>
+  );
+}
+
+export const getServerSideProps: GetServerSideProps<Props> = async (context) => {
   const session = await getServerSession(context.req, context.res, authOptions);
   if (!session || session.user?.role !== "CLIENT") {
     return { redirect: { destination: "/login", permanent: false } };
   }
 
+  const userId = session.user.id;
   const projectId = context.params?.id as string;
   const project = await prisma.clientProject.findUnique({
     where: { id: projectId },
     include: {
-      layouts: { include: { layout: true } },
+      layouts: { include: { layout: { include: { pages: { orderBy: { index: "asc" } } } } } },
       images: {
         where: { status: { in: ["CLIENT_REVIEW", "APPROVED"] } },
         include: {
-          comments: {
-            where: { userId: session.user.id as string },
-            orderBy: { createdAt: "asc" },
-          },
+          comments: { where: { userId }, orderBy: { createdAt: "asc" } },
+          labels: { where: { userId } },
         },
-        orderBy: { uploadedAt: "desc" },
+        orderBy: { uploadedAt: "asc" },
       },
     },
   });
   if (
     !project ||
-    !canClientAccessProject({
-      sessionUserId: session.user.id,
-      projectClientId: project.clientId,
-      projectStatus: project.status,
-    })
+    !canClientAccessProject({ sessionUserId: userId, projectClientId: project.clientId, projectStatus: project.status })
   ) {
     return { notFound: true };
   }
 
-  const selection = await prisma.clientSelection.findFirst({
-    where: { projectId, clientId: session.user.id as string },
-    include: { selectedImages: true },
-  });
-  const favorites = await prisma.photoFavorite.findMany({
-    where: { galleryId: projectId, userId: session.user.id as string },
-    select: { photoId: true },
-  });
-  const requestHistory = await prisma.projectRequestMessage.findMany({
-    where: { projectId },
-    orderBy: { createdAt: "desc" },
-  });
+  const [selection, favourites] = await Promise.all([
+    prisma.clientSelection.findFirst({ where: { projectId, clientId: userId } }),
+    prisma.photoFavorite.findMany({ where: { galleryId: projectId, userId }, select: { photoId: true } }),
+  ]);
+
+  const photos = await Promise.all(
+    project.images.map(async (image) => {
+      const imageUrl = await getDisplayUrl(image.imagePath, "/bg.jpg");
+      return {
+        id: image.id,
+        imageUrl,
+        thumbUrl: getThumbnailUrl(imageUrl),
+        downloadUrl: getDownloadUrl(imageUrl, image.filename),
+        filename: image.filename,
+        downloadable: image.downloadable,
+        label: (image.labels[0]?.color as LabelColor | undefined) ?? null,
+        comments: image.comments.map((comment) => ({
+          id: comment.id,
+          message: comment.message,
+          createdAt: comment.createdAt.toISOString(),
+        })),
+      };
+    }),
+  );
+
+  const origin = process.env.NEXTAUTH_URL?.replace(/\/$/, "") || "";
 
   return {
     props: {
@@ -431,48 +373,30 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         status: project.status,
         requestMessage: project.requestMessage,
         createdAt: project.createdAt.toISOString(),
+        shareUrl: project.shareSlug && project.accessCodeHash ? `${origin}/g/${project.shareSlug}` : null,
       },
+      coverUrl: photos[0]?.imageUrl ?? null,
       layouts: await Promise.all(
-        project.layouts.map(async (item) => ({
-          id: item.layout.id,
-          name: item.layout.name,
-          previewImageUrl: await getDisplayUrl(item.layout.previewImagePath, "/bg.jpg"),
-          description: item.layout.description,
+        project.layouts.map(async ({ layout }) => ({
+          id: layout.id,
+          name: layout.name,
+          description: layout.description,
+          capacity: bookletCapacity(layout.pages.map((page) => ({ slots: parseSlots(page.slots) })), layout.pageCount),
+          orientation: layout.orientation,
+          previewImageUrl: await getDisplayUrl(layout.previewImagePath, "/bg.jpg"),
+          pages: await Promise.all(
+            layout.pages.map(async (page) => ({
+              sketchUrl: getThumbnailUrl(await getDisplayUrl(page.sketchPath, "/bg.jpg"), 1200),
+              slots: parseSlots(page.slots),
+            })),
+          ),
         })),
       ),
-      images: await Promise.all(
-        project.images.map(async (image) => {
-          const imageUrl = await getDisplayUrl(image.imagePath, "/trumieyeslogo.png");
-          return {
-            id: image.id,
-            imageUrl,
-            downloadUrl: getDownloadUrl(imageUrl, image.filename),
-            filename: image.filename,
-            downloadable: image.downloadable,
-            status: image.status,
-            uploadedAt: image.uploadedAt.toISOString(),
-            comments: image.comments.map((comment) => ({
-              id: comment.id,
-              message: comment.message,
-              createdAt: comment.createdAt.toISOString(),
-            })),
-          };
-        }),
-      ),
-      existingSelection: selection
-        ? {
-            selectedLayoutId: selection.selectedLayoutId,
-            notes: selection.notes,
-            selectedImages: selection.selectedImages.map((item) => item.projectImageId),
-            approvalStatus: selection.approvalStatus,
-          }
+      photos,
+      favouriteIds: favourites.map((favourite) => favourite.photoId),
+      selection: selection
+        ? { selectedLayoutId: selection.selectedLayoutId, notes: selection.notes, approvalStatus: selection.approvalStatus }
         : null,
-      favoriteIds: favorites.map((favorite) => favorite.photoId),
-      requestHistory: requestHistory.map((entry) => ({
-        id: entry.id,
-        message: entry.message,
-        createdAt: entry.createdAt.toISOString(),
-      })),
     },
   };
 };

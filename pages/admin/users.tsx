@@ -171,15 +171,15 @@ export default function AdminUsersPage({ users: initialUsers, currentUserId }: U
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
           <Card className="bg-black/25 p-4 backdrop-blur">
             <p className="text-sm text-muted">Users</p>
-            <p className="mt-2 font-serif text-4xl font-light">{counts.total}</p>
+            <p className="mt-2 font-display text-4xl font-light">{counts.total}</p>
           </Card>
           <Card className="bg-black/25 p-4 backdrop-blur">
             <p className="text-sm text-muted">Active</p>
-            <p className="mt-2 font-serif text-4xl font-light">{counts.active}</p>
+            <p className="mt-2 font-display text-4xl font-light">{counts.active}</p>
           </Card>
           <Card className="bg-black/25 p-4 backdrop-blur">
             <p className="text-sm text-muted">Admins</p>
-            <p className="mt-2 font-serif text-4xl font-light">{counts.admins}</p>
+            <p className="mt-2 font-display text-4xl font-light">{counts.admins}</p>
           </Card>
         </div>
       </section>
@@ -196,7 +196,7 @@ export default function AdminUsersPage({ users: initialUsers, currentUserId }: U
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-5">
             <div>
               <p className="page-kicker">Directory</p>
-              <h3 className="mt-1 font-serif text-3xl font-light">Team members</h3>
+              <h3 className="mt-1 font-display text-3xl font-light">Team members</h3>
             </div>
             <Users className="text-brand-red" size={22} />
           </div>
@@ -259,7 +259,7 @@ export default function AdminUsersPage({ users: initialUsers, currentUserId }: U
             </span>
             <div>
               <p className="page-kicker">Access</p>
-              <h3 className="font-serif text-3xl font-light">Add user</h3>
+              <h3 className="font-display text-3xl font-light">Add user</h3>
             </div>
           </div>
 

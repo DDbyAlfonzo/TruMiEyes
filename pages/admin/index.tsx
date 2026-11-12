@@ -106,7 +106,7 @@ export default function AdminDashboard({ users, projects, layouts }: AdminProps)
                 <p className="text-sm text-muted">{stat.label}</p>
                 <Icon size={18} className="text-champagne" />
               </div>
-              <p className="mt-5 font-serif text-5xl font-light">{stat.value}</p>
+              <p className="mt-5 font-display text-5xl font-light">{stat.value}</p>
             </Card>
           );
         })}
@@ -117,7 +117,7 @@ export default function AdminDashboard({ users, projects, layouts }: AdminProps)
           <div className="mb-5 flex items-center justify-between">
             <div>
               <p className="page-kicker">Recent activity</p>
-              <h3 className="mt-1 font-serif text-3xl font-light">Client projects</h3>
+              <h3 className="mt-1 font-display text-3xl font-light">Client projects</h3>
             </div>
             <Link href="/admin/projects" className="text-sm text-muted hover:text-white">
               View all
@@ -155,7 +155,7 @@ export default function AdminDashboard({ users, projects, layouts }: AdminProps)
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="page-kicker">Layouts</p>
-                <h3 className="mt-1 font-serif text-3xl font-light">Templates</h3>
+                <h3 className="mt-1 font-display text-3xl font-light">Templates</h3>
               </div>
               <Link href="/admin/layouts" className="text-sm text-muted hover:text-white">
                 Manage
@@ -179,7 +179,7 @@ export default function AdminDashboard({ users, projects, layouts }: AdminProps)
               </span>
               <div>
                 <p className="page-kicker">Clients</p>
-                <h3 className="font-serif text-3xl font-light">Invite client</h3>
+                <h3 className="font-display text-3xl font-light">Invite client</h3>
               </div>
             </div>
             <div className="space-y-3">

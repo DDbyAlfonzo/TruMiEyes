@@ -15,6 +15,8 @@ import { EmptyState } from "../../../components/EmptyState";
 import { ImageWithFallback } from "../../../components/ImageWithFallback";
 import { BrandMark } from "../../../components/BrandMark";
 import { Card } from "../../../components/ui/card";
+import { GalleryAccessCard } from "../../../components/GalleryAccessCard";
+import { labelByColor, type LabelColor } from "../../../lib/labels";
 import { Button } from "../../../components/ui/button";
 import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
@@ -27,6 +29,8 @@ type ProjectPageProps = {
     status: string;
     clientEmail: string;
     requestMessage: string | null;
+    shareUrl: string | null;
+    codeActive: boolean;
   };
   layouts: { id: string; name: string; previewImageUrl: string; orientation: string }[];
   assignedLayouts: string[];
@@ -46,7 +50,7 @@ type ProjectPageProps = {
     selectedImages: { id: string; imageUrl: string }[];
     approvalStatus: string;
   } | null;
-  favoriteImages: { id: string; imageUrl: string; filename: string }[];
+  favoriteImages: { id: string; imageUrl: string; filename: string; label: LabelColor | null }[];
   requestHistory: { id: string; message: string; createdAt: string; authorEmail: string }[];
 };
 
@@ -325,6 +329,7 @@ export default function AdminProjectPage({
                 </span>
               </div>
             </div>
+            <div className="space-y-4">
             <Card className="bg-black/30 p-4">
               <p className="page-kicker">Project status</p>
               <div className="mt-4 space-y-3">
@@ -341,6 +346,13 @@ export default function AdminProjectPage({
                 </Button>
               </div>
             </Card>
+            <GalleryAccessCard
+              projectId={project.id}
+              shareUrl={project.shareUrl}
+              codeActive={project.codeActive}
+              disabled={status === "DRAFT"}
+            />
+            </div>
           </div>
         </header>
 
@@ -348,7 +360,7 @@ export default function AdminProjectPage({
           <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
             <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setShowRequestModal(false)} />
             <Card className="relative z-10 w-full max-w-xl p-6">
-              <h3 className="font-serif text-3xl font-light">Request changes</h3>
+              <h3 className="font-display text-3xl font-light">Request changes</h3>
               <p className="mt-2 text-sm text-muted">
                 Let the client know what to update. This will move the project to IN_REVIEW.
               </p>
@@ -382,7 +394,7 @@ export default function AdminProjectPage({
         <section className="grid gap-6 xl:grid-cols-[minmax(0,0.36fr)_minmax(0,0.64fr)]">
           <div className="space-y-6">
             <Card className="p-5">
-              <h2 className="font-serif text-3xl font-light">Assign layouts</h2>
+              <h2 className="font-display text-3xl font-light">Assign layouts</h2>
               <div className="mt-5 space-y-3">
                 {layouts.map((layout) => (
                   <button
@@ -408,7 +420,7 @@ export default function AdminProjectPage({
             </Card>
 
             <Card className="p-5">
-              <h2 className="font-serif text-3xl font-light">Upload images</h2>
+              <h2 className="font-display text-3xl font-light">Upload images</h2>
               <p className="mt-2 text-sm text-muted">Add photographs to this project gallery.</p>
               <div className="mt-5">
                 <UploadDropzone
@@ -429,7 +441,7 @@ export default function AdminProjectPage({
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="page-kicker">Image controls</p>
-                <h2 className="font-serif text-3xl font-light">Project images</h2>
+                <h2 className="font-display text-3xl font-light">Project images</h2>
               </div>
             </div>
             {images.length === 0 ? (
@@ -511,7 +523,7 @@ export default function AdminProjectPage({
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="page-kicker">Client choices</p>
-                <h2 className="font-serif text-3xl font-light">Current favourites</h2>
+                <h2 className="font-display text-3xl font-light">Current favourites</h2>
               </div>
               <span className="text-sm text-muted">{favoriteImages.length} selected</span>
             </div>
@@ -522,7 +534,18 @@ export default function AdminProjectPage({
                 {favoriteImages.map((image) => (
                   <div key={image.id} className="overflow-hidden rounded-3xl border border-line bg-black/20">
                     <ImageWithFallback src={image.imageUrl} alt={image.filename} className="aspect-[4/3] w-full object-cover" />
-                    <p className="truncate p-3 text-xs text-zinc-400">{image.filename}</p>
+                    <p className="flex items-center gap-2 p-3 text-xs text-zinc-400">
+                      {image.label && (
+                        <span
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line px-2 py-0.5 text-[11px] text-zinc-200"
+                          title={labelByColor[image.label].name}
+                        >
+                          <span className="h-2 w-2 rounded-full" style={{ background: labelByColor[image.label].swatch }} />
+                          {labelByColor[image.label].name}
+                        </span>
+                      )}
+                      <span className="truncate">{image.filename}</span>
+                    </p>
                   </div>
                 ))}
               </div>
@@ -531,7 +554,7 @@ export default function AdminProjectPage({
 
           <Card className="p-5">
             <p className="page-kicker">Submitted selection</p>
-            <h2 className="font-serif text-3xl font-light">Review status</h2>
+            <h2 className="font-display text-3xl font-light">Review status</h2>
             {selection ? (
               <div className="mt-5 space-y-4">
                 <div className="rounded-3xl border border-line bg-black/20 p-4">
@@ -574,7 +597,7 @@ export default function AdminProjectPage({
 
         <Card className="p-5">
           <p className="page-kicker">Communication</p>
-          <h2 className="font-serif text-3xl font-light">Request history</h2>
+          <h2 className="font-display text-3xl font-light">Request history</h2>
           {requestHistory.length === 0 && <p className="mt-4 text-sm text-muted">No requests yet.</p>}
           <div className="mt-5 space-y-3">
             {requestHistory.map((entry) => (
@@ -664,6 +687,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     include: { author: true },
     orderBy: { createdAt: "desc" },
   });
+  const labels = await prisma.photoLabel.findMany({
+    where: { galleryId: projectId, userId: project.clientId },
+    select: { photoId: true, color: true },
+  });
+  const labelByPhoto = new Map(labels.map((label) => [label.photoId, label.color as LabelColor]));
+  const origin = process.env.NEXTAUTH_URL?.replace(/\/$/, "") || "";
 
   return {
     props: {
@@ -674,6 +703,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         status: project.status,
         clientEmail: project.client.email,
         requestMessage: project.requestMessage,
+        shareUrl: project.shareSlug ? `${origin}/g/${project.shareSlug}` : null,
+        codeActive: Boolean(project.accessCodeHash),
       },
       layouts: await Promise.all(
         layouts.map(async (layout) => ({
@@ -687,7 +718,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       images: await Promise.all(
         images.map(async (image) => ({
           id: image.id,
-          imageUrl: await getDisplayUrl(image.imagePath, "/trumieyeslogo.png"),
+          imageUrl: await getDisplayUrl(image.imagePath, "/bg.jpg"),
           filename: image.filename,
           downloadable: image.downloadable,
           status: image.status,
@@ -709,7 +740,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             selectedImages: await Promise.all(
               selection.selectedImages.map(async (item) => ({
                 id: item.projectImageId,
-                imageUrl: await getDisplayUrl(item.projectImage.imagePath, "/trumieyeslogo.png"),
+                imageUrl: await getDisplayUrl(item.projectImage.imagePath, "/bg.jpg"),
               })),
             ),
           }
@@ -717,8 +748,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       favoriteImages: await Promise.all(
         favorites.map(async (favorite) => ({
           id: favorite.photoId,
-          imageUrl: await getDisplayUrl(favorite.photo.imagePath, "/trumieyeslogo.png"),
+          imageUrl: await getDisplayUrl(favorite.photo.imagePath, "/bg.jpg"),
           filename: favorite.photo.filename,
+          label: labelByPhoto.get(favorite.photoId) ?? null,
         })),
       ),
       requestHistory: requestHistory.map((entry) => ({

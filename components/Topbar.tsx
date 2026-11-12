@@ -15,7 +15,7 @@ export function Topbar({ title, eyebrow, actions, menuButton }: TopbarProps) {
           {menuButton}
           <div className="min-w-0">
             {eyebrow && <p className="text-[11px] uppercase tracking-[0.25em] text-champagne">{eyebrow}</p>}
-            {title && <h1 className="truncate font-serif text-2xl font-light tracking-wide text-white md:text-3xl">{title}</h1>}
+            {title && <h1 className="truncate font-display text-2xl font-light tracking-wide text-white md:text-3xl">{title}</h1>}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2 py-2">{actions}</div>

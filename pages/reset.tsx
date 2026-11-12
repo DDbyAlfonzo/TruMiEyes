@@ -43,11 +43,11 @@ export default function ResetPage() {
 
   return (
     <main className="min-h-screen bg-trumi-dark text-white flex items-center justify-center px-6 py-12">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#111318] p-10 shadow-2xl text-center">
+      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-surface p-10 shadow-2xl text-center">
         <img
-          src="/trumieyeslogo.png"
+          src="/brand/logo-stacked-white.svg"
           alt="TruMiEyes"
-          className="mx-auto w-64 mb-6 brightness-0 invert"
+          className="mx-auto mb-8 w-48"
         />
         <h1 className="text-2xl font-semibold mb-2">Reset password</h1>
         <p className="text-white/60 mb-6">Enter a new password to continue.</p>

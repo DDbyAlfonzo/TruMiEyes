@@ -84,7 +84,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             selectedImages: await Promise.all(
               selection.selectedImages.map(async (item) => ({
                 id: item.projectImageId,
-                imageUrl: await getDisplayUrl(item.projectImage.imagePath, "/trumieyeslogo.png"),
+                imageUrl: await getDisplayUrl(item.projectImage.imagePath, "/bg.jpg"),
               })),
             ),
           }

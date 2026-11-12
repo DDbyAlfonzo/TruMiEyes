@@ -1,148 +1,116 @@
 import { GetServerSideProps } from "next";
+import Link from "next/link";
 import { useState } from "react";
 import { getServerSession } from "next-auth";
+import { PenLine, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { authOptions } from "../../api/auth/[...nextauth]";
 import { prisma } from "../../../lib/prisma";
 import { readApiJson } from "../../../lib/clientApi";
-import { getDisplayUrl } from "../../../lib/storage";
-import { uploadFileWithProgress } from "../../../lib/uploadClient";
+import { getDisplayUrl, getThumbnailUrl } from "../../../lib/storage";
+import { parseSlots, type Orientation, type Slot } from "../../../lib/booklets";
 import { AppShell } from "../../../components/AppShell";
-import { Card } from "../../../components/ui/card";
-import { Input } from "../../../components/ui/input";
-import { Select } from "../../../components/ui/select";
 import { Button } from "../../../components/ui/button";
-import { UploadDropzone } from "../../../components/UploadDropzone";
 import { EmptyState } from "../../../components/EmptyState";
-import { ImageWithFallback } from "../../../components/ImageWithFallback";
+import { BookletPage } from "../../../components/booklet/BookletPage";
 
-type Layout = {
+type Booklet = {
   id: string;
   name: string;
   description: string | null;
+  orientation: Orientation;
+  capacity: number;
   previewImageUrl: string;
-  pageCount: number;
-  orientation: string;
+  pages: { sketchUrl: string; slots: Slot[] }[];
 };
 
-type Props = {
-  layouts: Layout[];
-};
+export default function LayoutsPage({ layouts }: { layouts: Booklet[] }) {
+  const [items, setItems] = useState(layouts);
+  const [busy, setBusy] = useState<string | null>(null);
 
-export default function LayoutsPage({ layouts }: Props) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [pageCount, setPageCount] = useState(20);
-  const [orientation, setOrientation] = useState("PORTRAIT");
-  const [file, setFile] = useState<File | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const handleSubmit = async () => {
-    if (!name.trim() || !file) {
-      setSuccess("");
-      setError("Enter a layout name and choose a preview image first.");
-      return;
-    }
-
-    setSaving(true);
-    setUploadProgress(0);
-    setError("");
-    setSuccess("");
-
+  const remove = async (layout: Booklet) => {
+    if (busy) return;
+    setBusy(layout.id);
     try {
-      const uploadData = await uploadFileWithProgress(file, setUploadProgress);
-
       await readApiJson(
         await fetch("/api/admin/layouts", {
-          method: "POST",
+          method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name,
-            description,
-            pageCount,
-            orientation,
-            previewImagePath: uploadData.path,
-          }),
+          body: JSON.stringify({ layoutId: layout.id }),
         }),
-        "Unable to save the layout right now.",
+        "Couldn't remove that booklet.",
       );
-
-      setSuccess("Layout saved. Refreshing the gallery...");
-      window.location.reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save the layout right now.");
+      setItems((prev) => prev.filter((item) => item.id !== layout.id));
+      toast.success(`${layout.name} removed.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't remove that booklet.");
     } finally {
-      setUploadProgress(null);
-      setSaving(false);
+      setBusy(null);
     }
   };
 
   return (
-    <AppShell role="admin" title="Book layouts" eyebrow="Admin">
-      <div className="mb-8">
-        <p className="page-kicker">Album design</p>
-        <h2 className="editorial-title mt-3">Layout library.</h2>
+    <AppShell
+      role="admin"
+      title="Booklets"
+      eyebrow="Admin"
+      actions={
+        <Link
+          href="/admin/layouts/new"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-brand-red px-5 text-sm font-medium text-white hover:bg-trumi-red-deep"
+        >
+          <PenLine size={16} /> <span className="hidden sm:inline">New from sketch</span>
+        </Link>
+      }
+    >
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="page-kicker">Album design</p>
+          <h2 className="editorial-title mt-3">Your booklets.</h2>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-muted">
+            Sketch a page, upload it, and it becomes a booklet clients can choose — with their favourite photos placed right into your layout.
+          </p>
+        </div>
       </div>
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)]">
-        <Card className="p-5">
-          <h3 className="font-serif text-3xl font-light">Upload layout</h3>
-          <div className="mt-5 space-y-4">
-            <Input placeholder="Layout name" value={name} onChange={(event) => setName(event.target.value)} />
-            <Input placeholder="Page count" type="number" value={pageCount} onChange={(event) => setPageCount(Number(event.target.value))} />
-            <Input placeholder="Description" value={description} onChange={(event) => setDescription(event.target.value)} />
-            <Select value={orientation} onChange={(event) => setOrientation(event.target.value)}>
-              <option value="PORTRAIT">Portrait</option>
-              <option value="LANDSCAPE">Landscape</option>
-              <option value="SQUARE">Square</option>
-            </Select>
-            <UploadDropzone
-              onFile={setFile}
-              onReject={(message) => {
-                setSuccess("");
-                setError(message);
-              }}
-              disabled={saving}
-              label={saving ? "Uploading preview..." : file ? file.name : "Drop layout preview"}
-              progress={uploadProgress}
-            />
-            {error && <p className="text-sm text-red-300">{error}</p>}
-            {success && <p className="text-sm text-emerald-300">{success}</p>}
-            <Button onClick={handleSubmit} disabled={saving}>
-              {saving ? "Saving layout..." : "Save layout"}
-            </Button>
-          </div>
-        </Card>
-
-        <div>
-          {layouts.length === 0 ? (
-            <EmptyState
-              title="No layouts uploaded yet"
-              description="Add preview templates so clients can choose their preferred album direction."
-            />
-          ) : (
-            <section className="grid gap-4 sm:grid-cols-2">
-              {layouts.map((layout) => (
-                <article key={layout.id} className="overflow-hidden rounded-3xl border border-line bg-surface">
-                  <ImageWithFallback
-                    src={layout.previewImageUrl}
-                    alt={layout.name}
-                    className="aspect-[4/3] w-full object-cover"
-                  />
-                  <div className="p-4">
-                    <h3 className="font-medium">{layout.name}</h3>
-                    <p className="mt-1 text-sm text-muted">
-                      {layout.orientation} · {layout.pageCount} pages
-                    </p>
-                  </div>
-                </article>
-              ))}
-            </section>
-          )}
-        </div>
-      </section>
+      {items.length === 0 ? (
+        <EmptyState
+          title="No booklets yet"
+          description="Upload a sketch of your album pages to create your first booklet."
+          actionLabel="New from sketch"
+          href="/admin/layouts/new"
+        />
+      ) : (
+        <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {items.map((layout) => (
+            <li key={layout.id} className="overflow-hidden rounded-3xl border border-line bg-surface">
+              <div className="flex h-56 items-center justify-center gap-2 bg-[#ECEAE5] p-5">
+                {layout.pages.length ? (
+                  layout.pages.slice(0, 3).map((page, i) => (
+                    <div key={i} className="h-full" style={{ aspectRatio: layout.orientation === "LANDSCAPE" ? "3/2" : layout.orientation === "SQUARE" ? "1" : "3/4" }}>
+                      <BookletPage orientation={layout.orientation} slots={page.slots} sketchUrl={page.sketchUrl} showSketch />
+                    </div>
+                  ))
+                ) : (
+                  <img src={layout.previewImageUrl} alt="" className="h-full w-full object-cover" />
+                )}
+              </div>
+              <div className="flex items-start justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <h3 className="truncate font-semibold">{layout.name}</h3>
+                  <p className="mt-1 text-sm text-muted">
+                    {layout.capacity} photos{layout.pages.length ? ` · ${layout.pages.length} pages` : ""} · {layout.orientation.toLowerCase()}
+                  </p>
+                  {layout.description && <p className="mt-1 truncate text-xs text-zinc-500">{layout.description}</p>}
+                </div>
+                <Button variant="ghost" size="icon" aria-label={`Remove ${layout.name}`} onClick={() => remove(layout)} disabled={busy === layout.id}>
+                  <Trash2 size={16} />
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </AppShell>
   );
 }
@@ -153,16 +121,29 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     return { redirect: { destination: "/login", permanent: false } };
   }
 
-  const layouts = await prisma.bookLayout.findMany({ orderBy: { createdAt: "desc" } });
-  const withUrls = await Promise.all(
-    layouts.map(async (layout) => ({
-      id: layout.id,
-      name: layout.name,
-      description: layout.description,
-      previewImageUrl: await getDisplayUrl(layout.previewImagePath, "/bg.jpg"),
-      pageCount: layout.pageCount,
-      orientation: layout.orientation,
-    })),
-  );
-  return { props: { layouts: withUrls } };
+  const layouts = await prisma.bookLayout.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { pages: { orderBy: { index: "asc" } } },
+  });
+
+  return {
+    props: {
+      layouts: await Promise.all(
+        layouts.map(async (layout) => ({
+          id: layout.id,
+          name: layout.name,
+          description: layout.description,
+          orientation: layout.orientation,
+          capacity: layout.pageCount,
+          previewImageUrl: await getDisplayUrl(layout.previewImagePath, "/bg.jpg"),
+          pages: await Promise.all(
+            layout.pages.map(async (page) => ({
+              sketchUrl: getThumbnailUrl(await getDisplayUrl(page.sketchPath, "/bg.jpg"), 600),
+              slots: parseSlots(page.slots),
+            })),
+          ),
+        })),
+      ),
+    },
+  };
 };

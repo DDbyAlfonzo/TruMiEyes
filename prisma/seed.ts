@@ -164,7 +164,7 @@ async function main() {
   await prisma.projectImage.createMany({
     data: Array.from({ length: 6 }).map((_, idx) => ({
       projectId: project.id,
-      imagePath: idx % 2 === 0 ? "/bg.jpg" : "/trumieyeslogo.png",
+      imagePath: idx % 2 === 0 ? "/bg.jpg" : "/social-card.jpg",
       filename: `sample_photo_${idx + 1}.jpg`,
     })),
   });

@@ -1,10 +1,16 @@
 import type { AppProps } from "next/app";
 import Head from "next/head";
+import { useEffect } from "react";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
+import { registerServiceWorker } from "../lib/pwa";
 import "../styles/globals.css";
 
 export default function App({ Component, pageProps }: AppProps) {
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
+
   return (
     <SessionProvider session={(pageProps as any).session}>
       <Head>
@@ -14,7 +20,12 @@ export default function App({ Component, pageProps }: AppProps) {
           content="Private photography galleries, image proofing, favourites, comments, and client delivery by TruMiEyes."
         />
         <meta name="application-name" content="TruMiEyes" />
-        <meta name="theme-color" content="#0F0F0F" />
+        <meta name="theme-color" content="#231F20" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="TruMiEyes" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="TruMiEyes" />
         <meta property="og:title" content="TruMiEyes Studio Proofing" />
@@ -40,8 +51,8 @@ export default function App({ Component, pageProps }: AppProps) {
         theme="dark"
         toastOptions={{
           style: {
-            background: "#181818",
-            border: "1px solid #3A2A2A",
+            background: "#231F20",
+            border: "1px solid #393536",
             color: "#fff",
           },
         }}
