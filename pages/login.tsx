@@ -9,7 +9,7 @@ import { STUDIO_CONTACT_NAME } from "../lib/studio";
 const fieldClass =
   "h-12 w-full rounded-xl border border-white/15 bg-white/[0.06] px-4 text-[15px] text-white outline-none transition placeholder:text-white/35 focus:border-white/60 focus:bg-white/[0.09]";
 
-export default function LoginPage() {
+export default function LoginPage({ afterSignIn }: { afterSignIn?: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +32,7 @@ export default function LoginPage() {
       }
       const session = await (await fetch("/api/auth/session")).json().catch(() => null);
       const role = session?.user?.role as "ADMIN" | "CLIENT" | undefined;
-      await router.replace(role === "ADMIN" ? "/admin" : "/client");
+      await router.replace(afterSignIn || (role === "ADMIN" ? "/admin" : "/client"));
     } catch {
       setError("We couldn't sign you in just now. Please try again.");
     } finally {
