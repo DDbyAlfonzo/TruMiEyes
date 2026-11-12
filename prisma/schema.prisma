@@ -63,6 +63,20 @@ model BookLayout {
   admin            User           @relation("AdminLayouts", fields: [createdByAdminId], references: [id])
   projectLayouts   ProjectLayout[]
   selections       ClientSelection[]
+  pages            LayoutPage[]
+}
+
+/// One page of a booklet, built from George's uploaded sketch.
+/// `slots` is a JSON array of photo boxes in page-relative units: [{ "x": 0.05, "y": 0.05, "w": 0.9, "h": 0.6 }]
+model LayoutPage {
+  id         String     @id @default(cuid())
+  layoutId   String
+  index      Int
+  sketchPath String
+  slots      Json
+  layout     BookLayout @relation(fields: [layoutId], references: [id], onDelete: Cascade)
+
+  @@unique([layoutId, index])
 }
 
 model ProjectLayout {

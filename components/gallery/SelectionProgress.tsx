@@ -5,17 +5,19 @@ type SelectionProgressProps = {
   /** Photos the chosen book layout fits; omit when no layout applies. */
   target?: number | null;
   tone?: "light" | "dark";
+  /** Name of the chosen booklet, shown as the label. */
+  bookletName?: string | null;
   className?: string;
 };
 
-export function SelectionProgress({ count, target, tone = "light", className }: SelectionProgressProps) {
+export function SelectionProgress({ count, target, tone = "light", bookletName, className }: SelectionProgressProps) {
   const pct = target ? Math.min(100, Math.round((count / target) * 100)) : 0;
   const over = Boolean(target && count > target);
 
   return (
     <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
       <div className={cn("flex items-baseline justify-between gap-3 text-xs", tone === "light" ? "text-ink-soft" : "text-white/70")}>
-        <span>{target ? "For your photo book" : "Your favourites"}</span>
+        <span className="truncate">{target ? (bookletName ? `For your ${bookletName}` : "For your photo book") : "Your favourites"}</span>
         <span className={cn("font-semibold tabular-nums", tone === "light" ? "text-trumi-ink" : "text-white")}>
           {target ? `${count} of ${target}` : count}
         </span>

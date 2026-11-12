@@ -12,7 +12,7 @@ type EmptyStateProps = {
 export function EmptyState({ title, description, actionLabel, onAction, href }: EmptyStateProps) {
   const action = actionLabel ? (
     href ? (
-      <a className="inline-flex h-11 items-center rounded-full bg-champagne px-5 text-sm font-medium text-black" href={href}>
+      <a className="inline-flex h-11 items-center rounded-full bg-brand-red px-5 text-sm font-medium text-white hover:bg-trumi-red-deep" href={href}>
         {actionLabel}
       </a>
     ) : (
