@@ -24,9 +24,11 @@ type Props = {
   title: string;
   photoCount: number;
   coverUrl: string | null;
+  /** Where to go after a correct code (defaults to the gallery). */
+  redirectTo?: string;
 };
 
-export default function GalleryAccessPage({ slug, projectId, title, photoCount, coverUrl }: Props) {
+export default function GalleryAccessPage({ slug, projectId, title, photoCount, coverUrl, redirectTo }: Props) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -38,7 +40,7 @@ export default function GalleryAccessPage({ slug, projectId, title, photoCount, 
     setError("");
     const result = await signIn("gallery", { slug, code: value, redirect: false });
     if (result?.ok && !result.error) {
-      await router.replace(`/projects/${projectId}`);
+      await router.replace(redirectTo || `/projects/${projectId}`);
       return;
     }
     setLoading(false);
