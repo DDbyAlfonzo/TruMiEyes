@@ -39,7 +39,14 @@ const ORIENTATIONS: { value: Orientation; label: string }[] = [
   { value: "SQUARE", label: "Square" },
 ];
 
-export default function NewBookletPage() {
+type NewBookletPageProps = {
+  /** Override for the demo build; defaults to the real upload. */
+  uploadSketch?: (file: File) => Promise<{ path: string }>;
+  /** Where to go after saving. */
+  doneHref?: string;
+};
+
+export default function NewBookletPage({ uploadSketch, doneHref = "/admin/layouts" }: NewBookletPageProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
@@ -80,7 +87,9 @@ export default function NewBookletPage() {
         .then((slots) => patchPage(page.key, { slots: slots.length ? slots : SLOT_PRESETS[1].slots, detected: slots.length > 0 }))
         .catch(() => patchPage(page.key, { slots: SLOT_PRESETS[1].slots }));
       try {
-        const upload = await uploadFileWithProgress(accepted[i], () => undefined);
+        const upload = uploadSketch
+          ? await uploadSketch(accepted[i])
+          : await uploadFileWithProgress(accepted[i], () => undefined);
         patchPage(page.key, { path: upload.path, status: "ready" });
       } catch {
         patchPage(page.key, { status: "failed" });
@@ -152,7 +161,7 @@ export default function NewBookletPage() {
         "Couldn't save the booklet.",
       );
       toast.success("Booklet saved. Assign it to a project to offer it to clients.");
-      router.push("/admin/layouts");
+      router.push(doneHref);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Couldn't save the booklet.");
       setSaving(false);
