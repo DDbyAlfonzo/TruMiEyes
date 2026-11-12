@@ -1,9 +1,15 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
 
-const adminEmail = "ardesignstudio25@gmail.com";
+const adminEmail = process.env.PRODUCTION_ADMIN_EMAIL?.trim().toLowerCase();
+const adminName = process.env.PRODUCTION_ADMIN_NAME?.trim() || "TruMiEyes Studio";
 
 async function main() {
+  if (!adminEmail) {
+    console.log("PRODUCTION_ADMIN_EMAIL not set — skipping production admin bootstrap.");
+    return;
+  }
+
   const existingAdmin = await prisma.user.findUnique({
     where: { email: adminEmail },
     select: { id: true, role: true, active: true },
@@ -48,7 +54,7 @@ async function main() {
   await prisma.user.create({
     data: {
       email: adminEmail,
-      name: "AR Design Studio",
+      name: adminName,
       passwordHash,
       role: "ADMIN",
       active: true,

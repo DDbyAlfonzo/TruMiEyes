@@ -1,3 +1,0 @@
-{
-  "buildCommand": "prisma migrate deploy && prisma generate && tsx prisma/ensureProductionAdmin.ts && npm run build"
-}

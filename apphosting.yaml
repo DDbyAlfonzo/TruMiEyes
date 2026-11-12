@@ -1,0 +1,51 @@
+# Firebase App Hosting config — https://firebase.google.com/docs/app-hosting/configure
+# Secrets are created with:  firebase apphosting:secrets:set <name>
+runConfig:
+  minInstances: 0
+  maxInstances: 4
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 1024
+
+scripts:
+  # Applies migrations, ensures the studio admin exists, then builds Next.js.
+  buildCommand: npm run build:apphosting
+
+env:
+  # Public URL of the app (used for auth callbacks and gallery links).
+  - variable: NEXTAUTH_URL
+    value: https://app.trumieyes.co.za
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_STUDIO_CONTACT_NAME
+    value: George
+    availability: [BUILD, RUNTIME]
+  - variable: PRODUCTION_ADMIN_EMAIL
+    value: info@trumieyes.co.za
+    availability: [BUILD]
+
+  - variable: DATABASE_URL
+    secret: trumieyes-database-url
+    availability: [BUILD, RUNTIME]
+  - variable: NEXTAUTH_SECRET
+    secret: trumieyes-nextauth-secret
+  - variable: PRODUCTION_ADMIN_TEMP_PASSWORD
+    secret: trumieyes-admin-temp-password
+    availability: [BUILD]
+  - variable: ADMIN_INVITE_TOKEN
+    secret: trumieyes-admin-invite-token
+  - variable: CLOUDINARY_CLOUD_NAME
+    secret: trumieyes-cloudinary-cloud-name
+  - variable: CLOUDINARY_API_KEY
+    secret: trumieyes-cloudinary-api-key
+  - variable: CLOUDINARY_API_SECRET
+    secret: trumieyes-cloudinary-api-secret
+  - variable: SMTP_HOST
+    secret: trumieyes-smtp-host
+  - variable: SMTP_PORT
+    value: "587"
+  - variable: SMTP_USER
+    secret: trumieyes-smtp-user
+  - variable: SMTP_PASS
+    secret: trumieyes-smtp-pass
+  - variable: SMTP_FROM
+    value: "TruMiEyes <no-reply@trumieyes.co.za>"

@@ -2,11 +2,10 @@ import { GetServerSideProps } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]";
 import { prisma } from "../../lib/prisma";
-import { getDisplayUrl } from "../../lib/storage";
-import { AppShell } from "../../components/AppShell";
-import { EmptyState } from "../../components/EmptyState";
-import { GalleryCard } from "../../components/GalleryCard";
-import { BrandMark } from "../../components/BrandMark";
+import Head from "next/head";
+import Link from "next/link";
+import { getDisplayUrl, getThumbnailUrl } from "../../lib/storage";
+import { GalleryHeader } from "../../components/gallery/GalleryHeader";
 
 type Props = {
   projects: {
@@ -21,47 +20,64 @@ type Props = {
 
 export default function ClientDashboard({ projects }: Props) {
   return (
-    <AppShell role="client" title="Your galleries" eyebrow="Client portal">
-      <section className="relative mb-10 overflow-hidden rounded-3xl border border-line bg-surface p-6 md:p-8">
-        <div className="absolute inset-0 opacity-20">
-          <img src="/bg.jpg" alt="" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/40" />
-        </div>
-        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(300px,0.2fr)]">
-        <div className="space-y-5">
-          <BrandMark />
-          <p className="page-kicker">Private sessions</p>
-          <h2 className="editorial-title mt-3">Review, favourite, approve.</h2>
-        </div>
-        <p className="self-end text-sm leading-6 text-muted">
-          TruMiEyes galleries are prepared for calm review, considered favourites, and final image delivery.
-        </p>
-        </div>
-      </section>
+    <div className="gallery-theme min-h-screen">
+      <Head>
+        <title>Your galleries | TruMiEyes</title>
+        <meta name="theme-color" content="#FAFAF8" />
+      </Head>
+      <GalleryHeader />
+      <main className="mx-auto max-w-[1360px] px-4 pb-20 pt-10 md:px-10 md:pt-16">
+        <p className="text-[11px] uppercase tracking-brand text-ink-soft">Welcome back</p>
+        <h1 className="mt-3 font-display text-5xl font-extralight leading-none text-trumi-ink md:text-7xl">Your galleries</h1>
 
-      {projects.length === 0 ? (
-        <EmptyState
-          title="No galleries available yet"
-          description="Shared galleries will appear here when they are ready for review."
-        />
-      ) : (
-        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {projects.map((project) => (
-            <GalleryCard
-              key={project.id}
-              href={`/projects/${project.id}`}
-              title={project.title}
-              status={project.status}
-              createdAt={project.createdAt}
-              photoCount={project.photoCount}
-              coverImageUrl={project.coverImageUrl}
-            />
-          ))}
-        </section>
-      )}
-    </AppShell>
+        {projects.length === 0 ? (
+          <div className="mt-10 rounded-xl border border-dashed border-hairline px-6 py-20 text-center">
+            <p className="font-display text-2xl font-light text-trumi-ink">Your photos are on their way</p>
+            <p className="mt-2 text-sm text-ink-soft">Galleries appear here as soon as they're ready for you.</p>
+          </div>
+        ) : (
+          <ul className="mt-10 grid gap-x-6 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
+            {projects.map((project, index) => (
+              <li key={project.id} className="animate-tile-in" style={{ animationDelay: `${index * 60}ms` }}>
+                <Link
+                  href={`/projects/${project.id}`}
+                  className="group block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trumi-red/40 focus-visible:ring-offset-4 focus-visible:ring-offset-paper"
+                >
+                  <div className="aspect-[4/3] overflow-hidden rounded-lg bg-stone">
+                    <img
+                      src={project.coverImageUrl || "/bg.jpg"}
+                      alt=""
+                      className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.03]"
+                    />
+                  </div>
+                  <div className="mt-4 flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h2 className="truncate text-lg font-semibold text-trumi-ink">{project.title}</h2>
+                      <p className="mt-1 text-sm text-ink-soft">
+                        {project.photoCount} photos ·{" "}
+                        {new Date(project.createdAt).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-hairline px-3 py-1 text-xs text-trumi-ink">
+                      {STATUS_COPY[project.status] || "Ready"}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </main>
+    </div>
   );
 }
+
+const STATUS_COPY: Record<string, string> = {
+  SHARED: "Ready to choose",
+  IN_REVIEW: "Changes requested",
+  APPROVED: "Approved",
+  COMPLETED: "Delivered",
+};
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getServerSession(context.req, context.res, authOptions);
@@ -99,7 +115,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           createdAt: project.createdAt.toISOString(),
           photoCount: project._count.images,
           coverImageUrl: project.images[0]
-            ? await getDisplayUrl(project.images[0].imagePath, "/bg.jpg")
+            ? getThumbnailUrl(await getDisplayUrl(project.images[0].imagePath, "/bg.jpg"), 1200)
             : null,
         })),
       ),

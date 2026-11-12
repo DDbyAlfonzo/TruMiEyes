@@ -84,3 +84,8 @@ export function getDownloadUrl(path: string, filename?: string) {
   const attachmentName = filename ? `:attachment:${encodeURIComponent(filename)}` : "";
   return applyCloudinaryTransform(path, `fl_attachment${attachmentName}`);
 }
+
+/** Width-capped variant for grids and filmstrips (Cloudinary only; other URLs pass through). */
+export function getThumbnailUrl(path: string, width = 900) {
+  return applyCloudinaryTransform(path, `c_limit,w_${width}`);
+}

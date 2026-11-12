@@ -23,6 +23,7 @@ model User {
   resetTokens  PasswordResetToken[]
   photoFavorites PhotoFavorite[]
   photoComments  PhotoComment[]
+  photoLabels    PhotoLabel[]
 }
 
 model ClientProject {
@@ -33,6 +34,12 @@ model ClientProject {
   status      ProjectStatus   @default(DRAFT)
   requestMessage String?
   createdAt   DateTime        @default(now())
+  /// Public share slug used in /g/[slug] gallery links
+  shareSlug   String?         @unique
+  /// bcrypt hash of the 6-digit gallery access code
+  accessCodeHash String?
+  accessFailedAttempts Int    @default(0)
+  accessLockedUntil DateTime?
   client      User            @relation("ClientProjects", fields: [clientId], references: [id])
   layouts     ProjectLayout[]
   images      ProjectImage[]
@@ -41,6 +48,7 @@ model ClientProject {
   requestMessages ProjectRequestMessage[]
   photoFavorites PhotoFavorite[]
   photoComments  PhotoComment[]
+  photoLabels    PhotoLabel[]
 }
 
 model BookLayout {
@@ -78,6 +86,7 @@ model ProjectImage {
   selectedBy SelectedImage[]
   favorites  PhotoFavorite[]
   comments   PhotoComment[]
+  labels     PhotoLabel[]
 }
 
 model ClientSelection {
@@ -132,6 +141,22 @@ model PhotoComment {
   @@index([galleryId])
 }
 
+model PhotoLabel {
+  id        String          @id @default(cuid())
+  userId    String
+  photoId   String
+  galleryId String
+  color     PhotoLabelColor
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  user      User            @relation(fields: [userId], references: [id])
+  photo     ProjectImage    @relation(fields: [photoId], references: [id])
+  gallery   ClientProject   @relation(fields: [galleryId], references: [id])
+
+  @@unique([userId, photoId])
+  @@index([galleryId])
+}
+
 model ProjectNote {
   id        String        @id @default(cuid())
   projectId String
@@ -159,6 +184,13 @@ model PasswordResetToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+}
+
+/// Client colour labels: GREEN = must print, AMBER = retouch, BLUE = black & white
+enum PhotoLabelColor {
+  GREEN
+  AMBER
+  BLUE
 }
 
 enum Role {

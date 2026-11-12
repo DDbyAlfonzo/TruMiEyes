@@ -102,7 +102,7 @@ export default function LoginPage() {
         <section className="relative hidden min-h-screen items-end px-12 pb-16 lg:flex xl:px-20 xl:pb-20">
           <div className="max-w-2xl">
             <p className="page-kicker">Private client proofing</p>
-            <h1 className="mt-4 font-serif text-7xl font-light leading-none tracking-wide drop-shadow-[0_5px_28px_rgba(0,0,0,0.82)] xl:text-8xl">
+            <h1 className="mt-4 font-display text-7xl font-light leading-none tracking-wide drop-shadow-[0_5px_28px_rgba(0,0,0,0.82)] xl:text-8xl">
               Your story, presented with care.
             </h1>
             <p className="mt-6 max-w-md text-base leading-7 text-zinc-100 drop-shadow-[0_3px_18px_rgba(0,0,0,0.82)]">
@@ -115,7 +115,7 @@ export default function LoginPage() {
           <div className="relative w-full max-w-md">
             <div className="mb-6 rounded-3xl border border-white/10 bg-black/35 p-6 shadow-2xl shadow-black/30 backdrop-blur-md lg:hidden">
               <p className="page-kicker">Private client proofing</p>
-              <h1 className="mt-3 font-serif text-4xl font-light leading-tight tracking-wide drop-shadow-[0_4px_18px_rgba(0,0,0,0.75)]">
+              <h1 className="mt-3 font-display text-4xl font-light leading-tight tracking-wide drop-shadow-[0_4px_18px_rgba(0,0,0,0.75)]">
                 Your story, presented with care.
               </h1>
               <p className="mt-4 text-sm leading-6 text-zinc-100 drop-shadow-[0_2px_12px_rgba(0,0,0,0.75)]">

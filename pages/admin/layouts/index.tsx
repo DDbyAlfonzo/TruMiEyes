@@ -88,7 +88,7 @@ export default function LayoutsPage({ layouts }: Props) {
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)]">
         <Card className="p-5">
-          <h3 className="font-serif text-3xl font-light">Upload layout</h3>
+          <h3 className="font-display text-3xl font-light">Upload layout</h3>
           <div className="mt-5 space-y-4">
             <Input placeholder="Layout name" value={name} onChange={(event) => setName(event.target.value)} />
             <Input placeholder="Page count" type="number" value={pageCount} onChange={(event) => setPageCount(Number(event.target.value))} />

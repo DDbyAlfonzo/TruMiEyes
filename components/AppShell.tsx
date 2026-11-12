@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import Link from "next/link";
 import { LogOut, Menu, Settings, UserCircle, Users } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
+import { clearPrivateCache } from "../lib/pwa";
 import { Button } from "./ui/button";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
@@ -70,7 +71,10 @@ export function AppShell({ children, title, eyebrow, role = "client", actions }:
                     <button
                       type="button"
                       className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left text-sm text-zinc-300 transition hover:bg-brand-red/15 hover:text-white"
-                      onClick={() => signOut({ callbackUrl: "/login" })}
+                      onClick={async () => {
+                  await clearPrivateCache();
+                  signOut({ callbackUrl: "/login" });
+                }}
                     >
                       <LogOut size={16} />
                       Logout
