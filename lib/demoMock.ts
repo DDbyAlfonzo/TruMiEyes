@@ -22,7 +22,13 @@ export function installDemoMocks() {
     }
     if (path === "/api/auth/csrf") return json({ csrfToken: "demo" });
     if (path === "/api/auth/providers") {
-      return json({ gallery: { id: "gallery", name: "Gallery code", type: "credentials", signinUrl: "/api/auth/signin/gallery", callbackUrl: "/api/auth/callback/gallery" } });
+      return json({
+        gallery: { id: "gallery", name: "Gallery code", type: "credentials", signinUrl: "/api/auth/signin/gallery", callbackUrl: "/api/auth/callback/gallery" },
+        credentials: { id: "credentials", name: "Credentials", type: "credentials", signinUrl: "/api/auth/signin/credentials", callbackUrl: "/api/auth/callback/credentials" },
+      });
+    }
+    if (path === "/api/auth/callback/credentials") {
+      return json({ url: `${window.location.origin}/demo/booklets/new` });
     }
     if (path.startsWith("/api/auth/callback/")) {
       const body = new URLSearchParams(String(init?.body || ""));
